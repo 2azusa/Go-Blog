@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"goblog/utils"
+	"log"
 	"time"
 
 	_ "github.com/garyburd/redigo/redis"
@@ -24,11 +25,10 @@ func InitDb() {
 		utils.DbName,
 	))
 	if err != nil {
-		fmt.Println("连接数据库失败，请检查参数", err)
-		return
+		log.Fatalf("连接数据库失败，请检查参数: %v", err)
 	}
 
-	defer db.Close()
+	// defer db.Close()
 
 	// 禁用默认表的复数形式
 	db.SingularTable(true)

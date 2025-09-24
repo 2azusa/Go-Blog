@@ -94,6 +94,13 @@ func EditUser(c *gin.Context) {
 	}
 
 	code = model.EditUser(req.Id, &req)
+	if code != errmsg.SUCCESS {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  code,
+			"message": errmsg.GetErrMsg(code),
+		})
+		return
+	}
 
 	profileOld, _ := model.GetProfileById(req.Id)
 	profile := &model.Profile{

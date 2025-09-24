@@ -22,8 +22,17 @@ func UpdateProfile(c *gin.Context) {
 	_ = c.ShouldBindJSON(&req)
 
 	profile, code := model.GetProfile(c)
+	if code != errmsg.SUCCESS {
+		c.JSON(http.StatusOK, gin.H{
+			"staust":  code,
+			"message": errmsg.GetErrMsg(code),
+		})
+		return
+	}
+
 	req.ID = profile.ID
 	code = model.UpdateProfile(c, req.ID, &req)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  code,
 		"message": errmsg.GetErrMsg(code),

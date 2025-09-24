@@ -12,7 +12,7 @@ interface CategoryFormData {
     name: string;
 }
 
-const CateList: React.FC = () => {
+const CateListPage: React.FC = () => {
     // State Hooks
     const [cateList, setCateList] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
@@ -225,4 +225,4 @@ const CateList: React.FC = () => {
     );
 };
 
-export default CateList;
+export default CateListPage;

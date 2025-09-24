@@ -96,16 +96,19 @@ func GetCateArticle(id int, pageSize int, pageNum int) ([]Article, int, int) {
 // 查询单个文章详细信息
 func GetArticleInfo(id int) (Article, int) {
 	var article Article
-	// 根据文章id查找其评论
-	comments, _ := GetCommentsByArticleId(id)
 
+	// 1. 先查询文章主题
 	err := db.Where("id = ?", id).First(&article).Error
-	for _, comment := range comments {
-		article.Comments = append(article.Comments, comment)
-	}
 	if err != nil {
 		return article, errmsg.ERROR_ARTICLE_NOT_EXIST
 	}
+	// 2. 文章存在，再查询并附其评论
+	comments, _ := GetCommentsByArticleId(id) // 这里可以暂时忽略错误，因为文章可能没有评论
+	if len(comments) > 0 {
+		// 使用建议的方式高效地附加评论
+		article.Comments = comments
+	}
+
 	return article, errmsg.SUCCESS
 }
 

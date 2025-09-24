@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { message } from 'antd';
+import { notificationService } from './context/NotificationContext';
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api/v1',
-  withCredentials: true, 
+  // withCredentials: true, 
   timeout: 10000,
 });
 
@@ -21,46 +21,38 @@ api.interceptors.request.use(
   }
 );
 
-// 响应拦截器：处理响应数据和错误
+// 响应拦截器：使用 notificationService 替换 antd message
 api.interceptors.response.use(
   (response) => {
-    // 您可以在这里添加通用的成功响应处理逻辑
-    // 例如，如果您的后端总是返回 { code, message, data } 这样的结构
-    // if (response.data.code !== 200) {
-    //   message.error(response.data.message || '请求失败');
-    //   return Promise.reject(response.data);
-    // }
+    // 直接返回响应体，让业务代码更简洁
     return response;
   },
   (error) => {
     if (error.response) {
       const { status, data } = error.response;
+      const errorMessage = data?.message || '请求失败'; // 从后端获取错误信息
       switch (status) {
-        case 401: // 未授权：token 无效或过期
-          message.error(data.message || '登录状态已过期，请重新登录');
-          sessionStorage.removeItem('token'); // 清除无效 token
-          // 重定向到登录页。在非组件文件中，使用 window.location.href 是一个简单的方法。
-          // 在更复杂的应用中，可能会使用全局 history 对象或 Redux action 来触发导航。
-          window.location.href = '/';
+        case 401:
+          notificationService.show('登录状态已过期，请重新登录', 'error');
+          sessionStorage.removeItem('token');
+          window.location.href = '/login'; // 重定向到登录页
           break;
-        case 403: // 禁止访问
-          message.error(data.message || '您没有权限访问此资源');
+        case 403:
+          notificationService.show(data?.message || '您没有权限访问此资源', 'warning');
           break;
-        case 404: // 资源未找到
-          message.error(data.message || '请求的资源不存在');
+        case 404:
+          notificationService.show(errorMessage, 'error');
           break;
-        case 500: // 服务器内部错误
-          message.error(data.message || '服务器内部错误，请稍后再试');
+        case 500:
+          notificationService.show(data?.message || '服务器内部错误，请稍后再试', 'error');
           break;
         default:
-          message.error(data.message || `请求错误: ${status}`);
+          notificationService.show(`${errorMessage} (状态码: ${status})`, 'error');
       }
     } else if (error.request) {
-      // 请求已发出但未收到响应
-      message.error('网络错误，请检查您的网络连接');
+      notificationService.show('网络错误，请检查您的网络连接', 'error');
     } else {
-      // 在设置请求时发生了一些错误
-      message.error('请求失败: ' + error.message);
+      notificationService.show('请求失败: ' + error.message, 'error');
     }
     return Promise.reject(error);
   }

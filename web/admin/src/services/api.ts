@@ -3,7 +3,7 @@ import { message } from 'antd';
 
 const api = axios.create({
     baseURL: 'http://localhost:8000/api/v1',
-    withCredentials: true,
+    // withCredentials: true,
     timeout: 10000,
 });
 
@@ -12,6 +12,9 @@ api.interceptors.response.use(
     (config) => {
         const token = sessionStorage.getItem('token');
         if (token) {
+            if (!config.headers) {
+                config.headers = {};
+            }
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;

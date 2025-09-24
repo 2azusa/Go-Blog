@@ -4,7 +4,6 @@ import (
 	"goblog/controller"
 	"goblog/middleware"
 	"goblog/utils"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,18 +15,22 @@ func InitRouter() {
 	r.Use(middleware.Logger())
 	r.Use(middleware.Cors())
 
-	// 后台管理的页面加载
-	r.LoadHTMLGlob("static/admin/index.html")
-	r.Static("admin/static", "static/admin/static")
-	r.StaticFile("admin/favicon.ico", "static/admin/favicon.ico")
-	r.GET("admin", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", nil)
-	})
+	// // 后台管理的页面加载
+	// r.LoadHTMLGlob("static/admin/index.html")
+	// r.Static("admin/static", "static/admin/static")
+	// r.StaticFile("admin/favicon.ico", "static/admin/favicon.ico")
+	// r.GET("admin", func(c *gin.Context) {
+	// 	c.HTML(http.StatusOK, "index.html", nil)
+	// })
 
 	// 前台展示的的页面加载
 	// r.LoadHTMLGlob("static/front/index.html")
 	// r.Static("front/static", "static/front/static")
 	// r.StaticFile("front/favicon.ico", "static/front/favicon.ico")
+	r.Static("/assets", "./static/front/dist/assets")
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./static/front/dist/index.html")
+	})
 	// r.GET("front", func(c *gin.Context) {
 	// 	c.HTML(http.StatusOK, "index.html", nil)
 	// })
@@ -46,7 +49,7 @@ func InitRouter() {
 		// 添加分类
 		auth.POST("category/add", controller.AddCategory)
 		// 编辑分类信息
-		auth.POST("category/add", controller.EditCategory)
+		auth.POST("category/:id", controller.EditCategory)
 		// 删除分类
 		auth.DELETE("category/:id", controller.DeleteCategory)
 
@@ -85,10 +88,11 @@ func InitRouter() {
 		route.GET("article/cate/:id", controller.GetCateArticle)
 		// 查询某文章下的所有评论
 		route.GET("comment/:id", controller.GetCommetns)
+
 		// 登陆
 		route.POST("login", controller.Login)
 		// 注册用户
-		route.POST("/register", controller.ActiveEmail)
+		route.POST("/register", controller.AddArticle)
 		// 邮件激活
 		route.GET("/active", controller.ActiveEmail)
 		// 登陆发送邮件，需要参数email

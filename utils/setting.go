@@ -37,7 +37,7 @@ var (
 
 func init() {
 	// 解析配置文件config.ini
-	file, err := ini.Load("config/config.int")
+	file, err := ini.Load("config/config.ini")
 	if err != nil {
 		fmt.Println("配置文件读取错误，请检查文件路径", err)
 	}

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api.ts';
 
-// 导入 MUI 组件
 import {
   Box,
   Card,
@@ -13,132 +12,153 @@ import {
   Divider,
   Pagination,
   Typography,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
-
-// 导入 MUI 图标
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 
-// 为文章对象定义 TypeScript 类型，增强代码健壮性
 interface Article {
   id: number;
   img: string;
-  name: string; // 假设 'name' 是分类名称
+  name: string;
   title: string;
   desc: string;
-  CreatedAt: string; // 日期先作为字符串接收，在渲染时格式化
+  CreatedAt: string;
+}
+interface ApiResponse<T> {
+  status: number;
+  data: T;
+  total: number;
+  message: string;
 }
 
 const ArticleListPage = () => {
-  // 1. 使用 Hooks 获取路由参数和导航函数
   const navigate = useNavigate();
-  const { id: categoryId } = useParams<{ id: string }>(); // 从 URL 获取 id
+  const { id: categoryId } = useParams<{ id: string }>();
 
-  // 2. 使用 useState 管理组件状态
+  // --- State Management ---
   const [articleList, setArticleList] = useState<Article[]>([]);
   const [total, setTotal] = useState(0);
   const [queryData, setQueryData] = useState({
     pagesize: 5,
     pagenum: 1,
   });
+  // Add loading and error states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // --- Data Fetching ---
   useEffect(() => {
     const getArticles = async () => {
-      // 如果 URL 中没有 id，可能代表首页，这里假设 API 用 '0' 或其他值代表“全部”
-      const currentCategoryId = categoryId || '0';
+      setLoading(true);
+      setError(null);
+      
       try {
-        const { data: result } = await axios.get(`api/article/cate/${currentCategoryId}`, {
-          // 在这里用到了 queryData 的两个属性
-          params: {
-            pagesize: queryData.pagesize,
-            pagenum: queryData.pagenum,
-          },
-        });
+        const params = {
+          pagesize: queryData.pagesize,
+          pagenum: queryData.pagenum,
+        };
 
-        if (result.status === 200) {
-          setArticleList(result.data);
-          setTotal(result.total);
+        // [FIX] Determine the correct API endpoint based on the route
+        const url = categoryId ? `/article/cate/${categoryId}` : '/articles';
+
+        // [FIX] Use the 'api' client and correctly destructure the response
+        const { data: response } = await api.get<ApiResponse<Article[]>>(url, { params });
+
+        if (response.status === 200) {
+          setArticleList(response.data);
+          setTotal(response.total);
+        } else {
+          setError(response.message || 'Failed to fetch data');
         }
-      } catch (error) {
-        console.error("Failed to fetch articles:", error);
+      } catch (err) {
+        // The global error notification is handled by api.ts interceptor.
+        // Set a local error for rendering an in-page message.
+        setError("Could not load articles. Please check your connection and try again.");
+        console.error("Failed to fetch articles:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     getArticles();
-    // FIX: 将所有在 effect 内部用到的 state/prop 原始值都作为依赖项
   }, [categoryId, queryData.pagenum, queryData.pagesize]);
 
-
-  // 4. 分页器页码变化时的处理函数
-  // FIX: 使用下划线 `_` 替代未使用的 `event` 参数
+  // --- Event Handlers & Helpers ---
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setQueryData({ ...queryData, pagenum: value });
-    // 页面滚动到顶部，提升用户体验
     window.scrollTo(0, 0);
   };
 
-  // 5. 日期格式化辅助函数
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', hour12: false
     };
-    return new Date(dateString).toLocaleString('sv-SE', options); // 使用瑞典格式得到 YYYY-MM-DD HH:mm
+    return new Date(dateString).toLocaleString('sv-SE', options);
   };
 
-  // 6. 渲染 JSX
+  // --- Conditional Rendering ---
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ m: 3 }}>{error}</Alert>
+    );
+  }
+
   return (
     <Box>
-      {/* 渲染文章列表 */}
-      {articleList.map((article) => (
-        <Card key={article.id} sx={{ mb: 2, display: 'flex' }}>
-          <CardActionArea
-            onClick={() => navigate(`/home/detail/${article.id}`)}
-            sx={{ display: 'flex', justifyContent: 'flex-start' }}
-          >
-            {/* 左侧图片 */}
-            <CardMedia
-              component="img"
-              sx={{ width: 120, height: 120, m: 2, borderRadius: 1.5 }}
-              image={article.img}
-              alt={article.title}
-            />
-            {/* 右侧内容 */}
-            <CardContent sx={{ flex: '1 1 auto', py: 2 }}>
-              <Typography variant="h6" component="div" gutterBottom>
-                <Chip
-                  label={article.name}
-                  color="secondary" // 'pink' 可以映射为 'secondary'
-                  size="small"
-                  sx={{ mr: 1.5, color: 'white' }}
-                />
-                {article.title}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {article.desc}
-              </Typography>
-              <Divider sx={{ mb: 1 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CalendarMonthIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
-                <Typography variant="caption" color="text.secondary">
-                  {formatDate(article.CreatedAt)}
+      {articleList.length > 0 ? (
+        articleList.map((article) => (
+          <Card key={article.id} sx={{ mb: 2, display: 'flex' }}>
+            <CardActionArea
+              onClick={() => navigate(`/home/detail/${article.id}`)}
+              sx={{ display: 'flex', justifyContent: 'flex-start' }}
+            >
+              <CardMedia
+                component="img"
+                sx={{ width: 120, height: 120, m: 2, borderRadius: 1.5, flexShrink: 0 }}
+                image={article.img}
+                alt={article.title}
+              />
+              <CardContent sx={{ flex: '1 1 auto', py: 2 }}>
+                <Typography variant="h6" component="div" gutterBottom>
+                  <Chip label={article.name} color="secondary" size="small" sx={{ mr: 1.5, color: 'white' }}/>
+                  {article.title}
                 </Typography>
-              </Box>
-            </CardContent>
-          </CardActionArea>
-        </Card>
-      ))}
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{article.desc}</Typography>
+                <Divider sx={{ mb: 1 }} />
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CalendarMonthIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
+                  <Typography variant="caption" color="text.secondary">{formatDate(article.CreatedAt)}</Typography>
+                </Box>
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        ))
+      ) : (
+        <Alert severity="info" sx={{ m: 3 }}>No articles found in this category.</Alert>
+      )}
 
-      {/* 分页器 */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <Pagination
-          count={Math.ceil(total / queryData.pagesize)}
-          page={queryData.pagenum}
-          onChange={handlePageChange}
-          color="primary"
-          showFirstButton
-          showLastButton
-        />
-      </Box>
+      {total > queryData.pagesize && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <Pagination
+            count={Math.ceil(total / queryData.pagesize)}
+            page={queryData.pagenum}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
+      )}
     </Box>
   );
 };

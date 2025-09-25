@@ -56,22 +56,27 @@ func GetUsers(IdOrName string, pageSize int, pageNum int) ([]User, int, error) {
 	var users []User
 	var total int64
 	DB := db.Model(&users)
-	Id, err := strconv.Atoi(IdOrName)
-	if err != nil {
-		if IdOrName != "" {
-			DB = DB.Where("username like ?", "%"+IdOrName+"%")
-		}
-	} else {
-		if Id > 0 {
+
+	// --- 修正查询逻辑 ---
+	if IdOrName != "" { // 只有在搜索词不为空时才应用 WHERE 条件
+		Id, err := strconv.Atoi(IdOrName)
+		if err != nil {
+			// 如果转换失败，说明是按名字搜索
+			DB = DB.Where("username LIKE ?", "%"+IdOrName+"%")
+		} else {
+			// 如果转换成功，说明是按 ID 搜索
 			DB = DB.Where("id = ?", Id)
 		}
 	}
+
 	err = DB.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
+	// 应用正确的分页
 	err = DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&users).Error
-	if err != nil {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, 0, err
 	}
 	return users, int(total), nil

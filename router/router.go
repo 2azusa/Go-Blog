@@ -15,24 +15,16 @@ func InitRouter() {
 	r.Use(middleware.Logger())
 	r.Use(middleware.Cors())
 
-	// // 后台管理的页面加载
-	// r.LoadHTMLGlob("static/admin/index.html")
-	// r.Static("admin/static", "static/admin/static")
-	// r.StaticFile("admin/favicon.ico", "static/admin/favicon.ico")
-	// r.GET("admin", func(c *gin.Context) {
-	// 	c.HTML(http.StatusOK, "index.html", nil)
-	// })
+	// 后台管理的页面加载
+	r.Static("/assets", "./static/admin/dist/assets")
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./static/admin/dist/index.html")
+	})
 
 	// 前台展示的的页面加载
-	// r.LoadHTMLGlob("static/front/index.html")
-	// r.Static("front/static", "static/front/static")
-	// r.StaticFile("front/favicon.ico", "static/front/favicon.ico")
-	r.Static("/assets", "./static/front/dist/assets")
-	r.NoRoute(func(c *gin.Context) {
-		c.File("./static/front/dist/index.html")
-	})
-	// r.GET("front", func(c *gin.Context) {
-	// 	c.HTML(http.StatusOK, "index.html", nil)
+	// r.Static("/assets", "./static/front/dist/assets")
+	// r.NoRoute(func(c *gin.Context) {
+	// 	c.File("./static/front/dist/index.html")
 	// })
 
 	// 设置中间件，以下操作需要权限
@@ -55,7 +47,7 @@ func InitRouter() {
 
 		/* 文章模块的路由接口 */
 		// 添加文章
-		auth.POST("article/add", controller.ActiveEmail)
+		auth.POST("article/add", controller.AddArticle)
 		// 添加评论
 		auth.POST("comment", controller.AddComment)
 		// 编辑文章
@@ -68,6 +60,7 @@ func InitRouter() {
 		auth.POST("upload", controller.Upload)
 		// 更新个人设置
 		auth.PUT("profile", controller.UpdateProfile)
+
 	}
 
 	route := r.Group("api/v1")
@@ -75,7 +68,7 @@ func InitRouter() {
 		// 添加用户
 		route.POST("user/add", controller.AddUser)
 		// 查询所有用户
-		route.GET("users", controller.GetUser)
+		auth.POST("users", controller.GetUser)
 		// 查询用户详细信息，包括文章
 		route.GET("user/:id", controller.GetUserInfo)
 		// 通过id查询分类信息
@@ -92,7 +85,7 @@ func InitRouter() {
 		// 登陆
 		route.POST("login", controller.Login)
 		// 注册用户
-		route.POST("/register", controller.AddArticle)
+		route.POST("/register", controller.AddUser)
 		// 邮件激活
 		route.GET("/active", controller.ActiveEmail)
 		// 登陆发送邮件，需要参数email

@@ -22,7 +22,7 @@ func Register(c *gin.Context) {
 	// 校验失败，返回错误信息
 	if code != errmsg.SUCCESS {
 		c.JSON(http.StatusOK, gin.H{
-			"code":    code,
+			"status":  code,
 			"message": msg,
 		})
 		return
@@ -44,7 +44,7 @@ func Register(c *gin.Context) {
 		_, code = model.CreateUser(&user)
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
+		"status":  code,
 		"message": errmsg.GetErrMsg(code),
 	})
 }
@@ -52,11 +52,11 @@ func Register(c *gin.Context) {
 // 邮件激活
 func ActiveEmail(c *gin.Context) {
 	var code int
-	vCode := c.Query("code")
+	vCode := c.Query("status")
 	if len(vCode) == 0 {
 		code = errmsg.ERROR_EMAIL_CODE_NOT_EXIST
 		c.JSON(http.StatusOK, gin.H{
-			"code":     code,
+			"status":   code,
 			"messsage": errmsg.GetErrMsg(code),
 		})
 		return
@@ -64,7 +64,7 @@ func ActiveEmail(c *gin.Context) {
 	code = model.UpdateUserStatus(vCode)
 
 	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
+		"status":  code,
 		"message": errmsg.GetErrMsg(code),
 	})
 }
@@ -92,7 +92,7 @@ func Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
+		"status":  code,
 		"message": errmsg.GetErrMsg(code),
 		"token":   token,
 	})
@@ -118,7 +118,7 @@ func LoginByEmail(c *gin.Context) {
 	var code int
 	var user model.User
 	to := c.Query("email")
-	userCode := c.Query("code")
+	userCode := c.Query("status")
 	// 从redis中拿到正确的验证码做比较
 	serverCode := model.Redis.Get(to).Val()
 
@@ -126,7 +126,7 @@ func LoginByEmail(c *gin.Context) {
 	if userCode != serverCode {
 		code = errmsg.ERROR_CODE_WRONG
 		c.JSON(http.StatusOK, gin.H{
-			"code":    code,
+			"status":  code,
 			"message": errmsg.GetErrMsg(code),
 		})
 		return
@@ -140,7 +140,7 @@ func LoginByEmail(c *gin.Context) {
 	// 登陆成功后删除redis中的email，防止重复使用
 	model.Redis.Del(to)
 	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
+		"status":  code,
 		"message": errmsg.GetErrMsg(code),
 		"token":   token,
 	})

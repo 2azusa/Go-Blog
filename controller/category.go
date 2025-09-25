@@ -95,8 +95,8 @@ func FindCategoryById(c *gin.Context) {
 		code = errmsg.SUCCESS
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"data":    cate,
 		"status":  code,
+		"data":    cate,
 		"message": errmsg.GetErrMsg(code),
 	})
 }

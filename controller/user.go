@@ -28,12 +28,13 @@ func GetUser(c *gin.Context) {
 	var req dto.ReqFindUser
 	_ = c.ShouldBindJSON(&req)
 
-	if req.PageSize == 0 {
-		req.PageSize = -1
+	if req.PageSize <= 0 {
+		req.PageSize = 10 // 给一个合理的默认值，而不是 -1
 	}
-	if req.PageNum == 0 {
-		req.PageNum = -1
+	if req.PageNum <= 0 {
+		req.PageNum = 1 // 默认从第 1 页开始
 	}
+
 	data, total, err := model.GetUsers(req.IdOrName, req.PageSize, req.PageNum)
 	code := errmsg.SUCCESS
 	if err != nil {

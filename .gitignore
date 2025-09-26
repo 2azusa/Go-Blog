@@ -1,12 +1,15 @@
-# Logs
+# Configuration files
+config/
+
+# Log files
 log/
 *.log
 
 # VSCode editor settings
 .vscode/
 
-# Misc files
+# Other directories
 _misc/
 
-# Configuration files (that should not be in git)
-config/
+# Compiled binary
+Go-Blog

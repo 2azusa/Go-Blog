@@ -1,17 +1,17 @@
 import { createBrowserRouter } from 'react-router-dom';
 
 import LoginPage from '../pages/LoginPage.tsx'
-import AdminLayout from '../pages/AdminLayout.tsx'
+import AdminLayout from '../layout/AdminLayout.tsx'
 import ProtectedRoute from './ProtectedRoute.tsx';
 
-import AddArtPage from '../pages/admin/AddArtPage.tsx';
-import ArtListPage from '../pages/admin/ArtListPage.tsx';
-import IndexPage from '../pages/admin/IndexPage.tsx';
-import CateListPage from '../pages/admin/CateListPage.tsx';
-import ProfilePage from '../pages/admin/ProfilePage.tsx';
-import UserListPage from '../pages/admin/UserListPage.tsx';
+import IndexPage from '../pages/IndexPage.tsx';
+// import AddArtPage from '../pages/admin/AddArtPage.tsx';
+import ArticleListPage from '../pages/ArticleListPage.tsx';
+import CateListPage from '../pages/CateListPage.tsx';
+import ProfilePage from '../pages/ProfilePage.tsx';
+import UserListPage from '../pages/UserListPage.tsx';
 import NotFoundPage from '../pages/NotFoundPage.tsx';
-
+import UserDetailPage from '../pages/UserDetailPage.tsx';
 
 // index        IndexPage
 // addart       AddArtPage
@@ -38,13 +38,13 @@ export const router = createBrowserRouter([
         index: true,
         element: <IndexPage />,
       },
-      {
-        path: 'addart/:id?',
-        element: <AddArtPage />,
-      },
+      // {
+      //   path: 'addart/:id?',
+      //   element: <AddArtPage />,
+      // },
       {
         path: 'artlist',
-        element: <ArtListPage />,
+        element: <ArticleListPage />,
       },
       {
         path: 'catelist',
@@ -53,7 +53,12 @@ export const router = createBrowserRouter([
       {
         path: 'userlist',
         element: <UserListPage />,
-      },{
+      },
+      {
+        path: 'userdetail/:id?',
+        element: <UserDetailPage />
+      },
+      {
         path: 'profile',
         element: <ProfilePage />,
       },

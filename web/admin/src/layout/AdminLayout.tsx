@@ -3,9 +3,9 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Layout } from 'antd';
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 
-import Navigate from '../layout/Navitage/Navigate';
-import Footer from '../layout/Footer/Footer';
-import Header from '../layout/Header/Header';
+import Navigate from './Navitage/Navigate';
+import Footer from './Footer/Footer';
+import Header from './Header/Header';
 
 const { Content, Header: AntHeader, Footer: AntFooter } = Layout;
 

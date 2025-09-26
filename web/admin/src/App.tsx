@@ -1,35 +1,21 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Outlet } from 'react-router-dom';
+
+// 导入全局样式或 Provider (如果需要)
+// import './App.css'; 
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  // 组件返回 JSX
+  // <Outlet /> 的位置就是之前 <router-view> 的位置
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {/* 
+        这里是整个应用的顶层。
+        你可以把需要应用到所有页面的组件、Provider (如 Redux, ThemeProvider) 放在这里。
+        但对于一个最简单的迁移，它只需要包含 <Outlet />。
+      */}
+      <Outlet />
     </>
-  )
+  );
 }
 
-export default App
+export default App;

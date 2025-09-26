@@ -2,3 +2,7 @@ log/*
 *.log
 .vscode
 _misc/*
+
+config/*
+
+config/config.ini

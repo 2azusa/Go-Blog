@@ -58,7 +58,7 @@ const Navigate: React.FC<NavigateProps> = ({ collapsed, onMenuClick }) => {
                 <Menu.Item key="/catelist"icon={<BookOutlined />}>
                     分类管理
                 </Menu.Item>
-                <Menu.Item key="userlist" icon={<UserOutlined />}>
+                <Menu.Item key="/userlist" icon={<UserOutlined />}>
                     用户列表
                 </Menu.Item>
                 <Menu.Item key="/profile" icon={<SettingOutlined />}>

@@ -1,8 +1,12 @@
-log/*
+# Logs
+log/
 *.log
-.vscode
-_misc/*
 
-config/*
+# VSCode editor settings
+.vscode/
 
-config/config.ini
+# Misc files
+_misc/
+
+# Configuration files (that should not be in git)
+config/

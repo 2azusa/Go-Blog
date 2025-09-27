@@ -4,131 +4,180 @@ import (
 	"goblog/dto"
 	"goblog/model"
 	"goblog/utils/errmsg"
+	"goblog/utils/validator"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 查询用户详细资料
-func GetUserInfo(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-
-	data, code := model.GetUserInfo(id)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    data,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 查询用户列表
-func GetUser(c *gin.Context) {
-	var req dto.ReqFindUser
-	_ = c.ShouldBindJSON(&req)
-
-	if req.PageSize <= 0 {
-		req.PageSize = 10 // 给一个合理的默认值，而不是 -1
-	}
-	if req.PageNum <= 0 {
-		req.PageNum = 1 // 默认从第 1 页开始
-	}
-
-	data, total, err := model.GetUsers(req.IdOrName, req.PageSize, req.PageNum)
-	code := errmsg.SUCCESS
-	if err != nil {
-		code = errmsg.ERROR
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    data,
-		"total":   total,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 添加用户
+// AddUser (管理员)添加新用户
+// @Router /api/v1/users/add [post]
 func AddUser(c *gin.Context) {
-	var data dto.ReqAddUser
-	_ = c.ShouldBindJSON(&data)
-
-	code := model.CheckUser(data.UserName)
-	if code == errmsg.SUCCESS {
-		user := &model.User{
-			Username: data.UserName,
-			Password: data.Password,
-			Email:    data.Email,
-			Role:     data.Role,
-			Status:   "Y",
-		}
-		result, _ := model.CreateUser(user)
-		profile := &model.Profile{
-			ID:    int(result.ID),
-			Name:  result.Username,
-			Email: result.Email,
-		}
-		code = model.CreateProfile(profile)
+	var req dto.ReqAddUser
+	// 1. 绑定并验证请求数据
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 编辑用户
-func EditUser(c *gin.Context) {
-	var req dto.ReqEditUser
-	var code int
-	_ = c.ShouldBindJSON(&req)
-
-	user, _ := model.GetUserInfo(req.Id)
-	if user.Username != req.UserName {
-		code = model.CheckUser(req.UserName)
-		if code != errmsg.SUCCESS {
-			c.JSON(code, gin.H{
-				"status":  code,
-				"message": errmsg.GetErrMsg(code),
-			})
-			return
-		}
-	}
-
-	code = model.EditUser(req.Id, &req)
-	if code != errmsg.SUCCESS {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  code,
-			"message": errmsg.GetErrMsg(code),
-		})
+	if err := validator.Validate(&req); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	profileOld, _ := model.GetProfileById(req.Id)
-	profile := &model.Profile{
-		ID:     req.Id,
-		Name:   req.UserName,
-		Email:  req.Email,
-		Desc:   profileOld.Desc,
-		WeChat: profileOld.WeChat,
-		Weibo:  profileOld.Weibo,
-		Img:    profileOld.Img,
-		Avatar: profileOld.Avatar,
+	// 2. 准备数据模型
+	newUser := &model.User{
+		Username: req.Username,
+		Password: req.Password,
+		Email:    req.Email,
+		Role:     req.Role,
 	}
-	code = model.UpdateProfile(c, profile.ID, profile)
+
+	// 3. 调用 model 层的业务逻辑
+	if err := model.CreateUser(newUser); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	// 4. 成功响应 - 已优化
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
+		"status": errmsg.AddUserSuccess.Status,
+		"data": dto.RspUser{
+			ID:        newUser.ID,
+			CreatedAt: newUser.CreatedAt,
+			Username:  newUser.Username,
+			Email:     newUser.Email,
+			Role:      newUser.Role,
+		},
+		"message": errmsg.AddUserSuccess.Message,
 	})
 }
 
-// 删除用户
-func DeleteUser(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+// GetUser 获取用户列表
+// @Router /api/v1/users [get]
+func GetUser(c *gin.Context) {
+	var req dto.ReqFindUser
+	if err := c.ShouldBindQuery(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	code := model.DeleteUser(id)
+	if req.PageSize <= 0 {
+		req.PageSize = 10
+	}
+	if req.PageNum <= 0 {
+		req.PageNum = 1
+	}
+
+	users, total, err := model.GetUsers(req.Query, req.PageSize, req.PageNum)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	var rspUsers []dto.RspUser
+	for _, user := range users {
+		rspUsers = append(rspUsers, dto.RspUser{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			Username:  user.Username,
+			Email:     user.Email,
+			Role:      user.Role,
+		})
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
+		"status":  errmsg.SUCCESS.Status,
+		"data":    rspUsers,
+		"total":   total,
+		"message": errmsg.SUCCESS.Message,
+	})
+}
+
+// GetUserInfo 获取单个用户详细信息
+// @Router /api/v1/users/{id} [get]
+func GetUserInfo(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidUserID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	user, err := model.GetUserInfo(id)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": errmsg.SUCCESS.Status,
+		"data": dto.RspUser{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			Username:  user.Username,
+			Email:     user.Email,
+			Role:      user.Role,
+		},
+		"message": errmsg.SUCCESS.Message,
+	})
+}
+
+// EditUser (管理员)编辑用户信息
+// @Router /api/v1/users/{id} [put]
+func EditUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidUserID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	var req dto.ReqEditUser
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	err = model.UpdateUserAndProfile(id, &req)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  errmsg.UpdateUserSuccess.Status,
+		"message": errmsg.UpdateUserSuccess.Message,
+	})
+}
+
+// DeleteUser (管理员)删除用户
+// @Router /api/v1/users/{id} [delete]
+func DeleteUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidUserID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	err = model.DeleteUser(id)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  errmsg.DeleteUserSuccess.Status,
+		"message": errmsg.DeleteUserSuccess.Message,
 	})
 }

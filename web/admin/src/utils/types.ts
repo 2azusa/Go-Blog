@@ -19,13 +19,10 @@ export interface IApiResponse<T> {
   token?: string;
 }
 
-/**
- * Corresponds to the Go `gorm.Model` struct.
- */
 export interface IGormModel {
   ID: number;
-  CreatedAt: string; // ISO date string
-  UpdatedAt: string;
+  CreatedAt: string;
+  UpdatedAt:string;
   DeletedAt: string | null;
 }
 
@@ -35,7 +32,6 @@ export interface IGormModel {
 // Corresponds to the Go `model` layer for internal data representation.
 // ===================================================================================
 
-/** Corresponds to the Go `Profile` struct. */
 export interface IProfile {
   id: number;
   name: string;
@@ -48,7 +44,6 @@ export interface IProfile {
   avatar: string;
 }
 
-/** Corresponds to the Go `User` struct. */
 export interface IUser extends IGormModel {
   username: string;
   email: string;
@@ -57,7 +52,6 @@ export interface IUser extends IGormModel {
   status: string;
 }
 
-/** Corresponds to the Go `Comment` struct. */
 export interface IComment extends IGormModel {
   commentator: string;
   content: string;
@@ -65,13 +59,11 @@ export interface IComment extends IGormModel {
   parent_id: number | null;
 }
 
-/** Corresponds to the Go `Category` struct. */
 export interface ICategory {
   id: number;
   name: string;
 }
 
-/** Corresponds to the Go `Article` struct. */
 export interface IArticle extends IGormModel {
   title: string;
   cid: number;
@@ -88,8 +80,7 @@ export interface IArticle extends IGormModel {
 // Corresponds to the Go `dto` layer for API communication.
 // ===================================================================================
 
-// --- Auth DTOs ---
-
+// ? // --- Auth DTOs ---
 export interface IReqLogin {
   username: string;
   password: string;
@@ -123,19 +114,18 @@ export interface IReqEditUser {
   role: number;
 }
 
-export interface IRspUserList {
-  users: IUser[];
-  total: number;
-}
-
 // --- Category DTOs ---
+
+export interface IReqFindCate {
+  pagenum: number;
+  pagesize: number;
+}
 
 export interface IReqAddCategory {
   name: string;
 }
 
 export interface IReqEditCategory {
-  id: number;
   name: string;
 }
 
@@ -147,6 +137,7 @@ export interface IReqFindArticle {
   title: string;
 }
 
+// ?
 export interface IReqCateArticle {
   pagenum: number;
   pagesize: number;
@@ -192,7 +183,7 @@ export interface IRspComment extends IGormModel {
   content: string;
   article_id: number;
   parent_id: number | null;
-  commentator: string; // Username of the commentator
+  commentator: string;
 }
 
 // --- Profile DTOs ---

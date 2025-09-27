@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"goblog/dto"
 	"goblog/model"
 	"goblog/utils/errmsg"
 	"net/http"
@@ -8,16 +9,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 上传文件
+// Upload 处理文件上传请求
 func Upload(c *gin.Context) {
-	file, fileHeadr, _ := c.Request.FormFile("file")
+	// 1. 从表单中获取文件
+	file, fileHeader, err := c.Request.FormFile("file")
+	if err != nil {
+		// --- 已优化：使用预定义变量 ---
+		appErr := errmsg.ErrGetFileFailed
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+	defer file.Close()
 
-	fileSize := fileHeadr.Size
+	// 3. 调用 model 函数进行上传
+	url, err := model.UploadFile(file, fileHeader.Size)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	url, code := model.UploadFile(file, fileSize)
+	// 5. 成功响应 - 已优化
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
-		"url":     url,
+		"status":  errmsg.UploadSuccess.Status,
+		"data":    dto.RspUpload{Url: url},
+		"message": errmsg.UploadSuccess.Message,
 	})
 }

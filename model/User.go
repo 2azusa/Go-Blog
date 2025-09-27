@@ -1,168 +1,268 @@
+// 文件路径: model/user.go
+
 package model
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"goblog/dto"
 	"goblog/utils/errmsg"
-	"log"
-	"strconv"
+	"io"
+	"strings"
 
 	"golang.org/x/crypto/scrypt"
 	"gorm.io/gorm"
 )
 
+const (
+	SaltBytes = 16 // 盐的长度
+	HashBytes = 32 // 哈希的长度
+)
+
 type User struct {
 	gorm.Model
-	Username string    `gorm:"type:varchar(20);not null" json:"username" validate:"required,min=4,max=12" label:"用户名"`
-	Password string    `gorm:"type:varchar(20);not null" json:"password" validate:"required,min=6,max=20" label:"密码"`
-	Email    string    `gorm:"type:varchar(32);not null" json:"email" validate:"required,email" label:"邮箱"`
-	Role     int       `gorm:"type:int ;DEFAULT:2" json:"role" validate:"required,gte=2" label:"角色"`
-	Article  []Article `gorm:"many2many:user_article"`
-	Status   string    `gorm:"type:varchar(12)" default:"N"` //激活状态
-	Code     string    `gorm:"type:varchar(80)"`             //激活码
+	Username string `gorm:"type:varchar(20);not null;unique" json:"username"`
+	Password string `gorm:"type:varchar(128);not null" json:"-"`
+	Email    string `gorm:"type:varchar(32);not null;unique" json:"email"`
+	Role     int    `gorm:"type:int;DEFAULT:2" json:"role"`
+	Status   string `gorm:"type:varchar(12);default:'N'" json:"-"`
+	Code     string `gorm:"type:varchar(80)" json:"-"`
 }
 
-// 查询用户是否存在
-func CheckUser(name string) (code int) {
-	var user User
-	db.Model(&user).Select("id").Where("username = ?", name).First(&user)
-	if user.ID > 0 {
-		return errmsg.ERROR_USERNAME_USERD // 1001
+// BeforeSave 是一个 GORM 钩子，在保存 User 记录前自动执行
+func (u *User) BeforeSave(tx *gorm.DB) (err error) {
+	if tx.Statement.Changed("Password") {
+		hashedPassword, err := HashPassword(u.Password)
+		if err != nil {
+			return err
+		}
+		u.Password = hashedPassword
 	}
-	return errmsg.SUCCESS
+	return nil
 }
 
-// 添加用户
-func CreateUser(data *User) (*User, int) {
-	err = db.Model(&User{}).Create(&data).Error
+// HashPassword 使用 scrypt 算法对密码进行哈希
+func HashPassword(password string) (string, error) {
+	salt := make([]byte, SaltBytes)
+	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+		return "", err
+	}
+	hash, err := scrypt.Key([]byte(password), salt, 16384, 8, 1, HashBytes)
 	if err != nil {
-		return nil, errmsg.ERROR // 500
+		return "", err
 	}
-	return data, errmsg.SUCCESS
+	encodedSalt := base64.StdEncoding.EncodeToString(salt)
+	encodedHash := base64.StdEncoding.EncodeToString(hash)
+	return fmt.Sprintf("%s$%s", encodedSalt, encodedHash), nil
 }
 
-// 查询用户详细信息，包括文章
-func GetUserInfo(id int) (User, int) {
-	var user User
-	err = db.Model(&user).Preload("Article").Where("id = ?", id).First(&user).Error
+// CheckPassword 验证提供的密码是否与存储的哈希密码匹配
+func CheckPassword(storedPassword, providedPassword string) (bool, error) {
+	parts := strings.Split(storedPassword, "$")
+	if len(parts) != 2 {
+		return false, errmsg.ErrInternalServer.WithMsg("存储的密码格式无效")
+	}
+	salt, err := base64.StdEncoding.DecodeString(parts[0])
 	if err != nil {
-		return user, errmsg.ERROR
+		return false, errmsg.ErrInternalServer.WithMsg("无法解析密码盐")
 	}
-	return user, errmsg.SUCCESS
+	hash, err := scrypt.Key([]byte(providedPassword), salt, 16384, 8, 1, HashBytes)
+	if err != nil {
+		return false, err
+	}
+	return base64.StdEncoding.EncodeToString(hash) == parts[1], nil
 }
 
-// 分页查询用户列表
-func GetUsers(IdOrName string, pageSize int, pageNum int) ([]User, int, error) {
+// CreateUser 添加一个新用户，并同时在事务中创建对应的 Profile
+func CreateUser(data *User) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 1. 在事务内检查用户名或邮箱是否已存在
+		var existingUser User
+		err := tx.Where("username = ? OR email = ?", data.Username, data.Email).First(&existingUser).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+		if existingUser.ID > 0 {
+			if existingUser.Username == data.Username {
+				return errmsg.ErrUsernameUsed
+			}
+			return errmsg.NewAppError(400, 1009, "该邮箱已被注册")
+		}
+
+		// 2. 创建 User 记录
+		if err := tx.Create(&data).Error; err != nil {
+			return err
+		}
+
+		// 3. 创建关联的 Profile 记录
+		profile := Profile{
+			ID:    int(data.ID),
+			Name:  data.Username,
+			Email: data.Email,
+		}
+		if err := tx.Create(&profile).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+// CheckUserExists 检查用户名是否已存在
+func CheckUserExists(name string) (bool, error) {
+	var user User
+	err := db.Select("id").Where("username = ?", name).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// GetUserInfo 查询单个用户的详细信息
+func GetUserInfo(id int) (*User, error) {
+	var user User
+	err := db.First(&user, id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrUserNotExist
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetUsers 分页查询用户列表
+func GetUsers(query string, pageSize int, pageNum int) ([]User, int, error) {
 	var users []User
 	var total int64
-	DB := db.Model(&users)
-
-	// --- 修正查询逻辑 ---
-	if IdOrName != "" { // 只有在搜索词不为空时才应用 WHERE 条件
-		Id, err := strconv.Atoi(IdOrName)
-		if err != nil {
-			// 如果转换失败，说明是按名字搜索
-			DB = DB.Where("username LIKE ?", "%"+IdOrName+"%")
-		} else {
-			// 如果转换成功，说明是按 ID 搜索
-			DB = DB.Where("id = ?", Id)
-		}
+	DB := db.Model(&User{})
+	if query != "" {
+		DB = DB.Where("username LIKE ?", "%"+query+"%")
 	}
-
-	err = DB.Count(&total).Error
-	if err != nil {
+	if err := DB.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-
-	// 应用正确的分页
-	err = DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&users).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	err := DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&users).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, 0, err
 	}
 	return users, int(total), nil
 }
 
-// 编辑用户
-func EditUser(id int, data *dto.ReqEditUser) int {
-	var maps = make(map[string]any)
-	maps["username"] = data.UserName
-	maps["role"] = data.Role
-	maps["email"] = data.Email
-	err = db.Model(&User{}).Where("id = ?", id).Updates(maps).Error
-	if err != nil {
-		return errmsg.ERROR
-	}
-	return errmsg.SUCCESS
+// UpdateUserAndProfile 在一个事务中，统一更新用户和其关联的 Profile 信息
+func UpdateUserAndProfile(id int, req *dto.ReqEditUser) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		var currentUser User
+		if err := tx.First(&currentUser, id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errmsg.ErrUserNotExist
+			}
+			return err
+		}
+
+		// 如果用户名被修改，检查新用户名是否与除自己以外的其他用户冲突
+		if currentUser.Username != req.Username {
+			var conflictUser User
+			err := tx.Where("username = ? AND id != ?", req.Username, id).First(&conflictUser).Error
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err // 查询时出错
+			}
+			if conflictUser.ID > 0 {
+				return errmsg.ErrUsernameUsed // 新名称已被其他用户使用
+			}
+		}
+
+		userUpdates := map[string]interface{}{"username": req.Username, "email": req.Email, "role": req.Role}
+		if err := tx.Model(&User{}).Where("id = ?", id).Updates(userUpdates).Error; err != nil {
+			return err
+		}
+		profileUpdates := map[string]interface{}{"name": req.Username, "email": req.Email}
+		if err := tx.Model(&Profile{}).Where("id = ?", id).Updates(profileUpdates).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
-// 删除用户
-func DeleteUser(id int) int {
-	// 删除与该用户相关的中间表
-	DeleteMidByUserId(id)
-	err = db.Model(&User{}).Where("id = ?", id).Delete(&User{}).Error
-	if err != nil {
-		return errmsg.ERROR
-	}
-	return errmsg.SUCCESS
+// DeleteUser 在一个事务中，删除用户及其关联的 Profile 和中间表记录
+func DeleteUser(id int) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		// 检查用户是否存在
+		if err := tx.First(&User{}, id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errmsg.ErrUserNotExist
+			}
+			return err
+		}
+
+		// 删除 user_article 中间表关联
+		if err := tx.Where("user_id = ?", id).Delete(&UserArticle{}).Error; err != nil {
+			return err
+		}
+
+		// 删除 Profile
+		if err := tx.Where("id = ?", id).Delete(&Profile{}).Error; err != nil {
+			return err
+		}
+
+		// 删除 User
+		if err := tx.Delete(&User{}, id).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
-// 在调用函数之前执行
-func (u *User) BeforeSave() {
-	u.Password = ScryptPw(u.Password)
-}
-
-// 使用scrypt密码加密
-func ScryptPw(password string) string {
-	const KeyLen = 10
-	var salt = make([]byte, 8)
-	salt = []byte{12, 32, 14, 6, 66, 22, 43, 11}
-	// 加密
-	HashPw, err := scrypt.Key([]byte(password), salt, 16384, 8, 1, KeyLen)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// 将加密后的密码转换为字符串
-	fpw := base64.StdEncoding.EncodeToString(HashPw)
-	return fpw
-}
-
-// 登陆验证
-func CheckLogin(username string, password string) (*User, int) {
+// CheckLogin 验证用户名和密码，用于登录
+func CheckLogin(username string, password string) (*User, error) {
 	var user User
-	db.Where("username = ?", username).First(&user)
+	err := db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrUserNotExist
+		}
+		return nil, err
+	}
 	if user.Status == "N" {
-		return nil, errmsg.ERROR_EMAIL_HAVE_NOT_ACTIVE
+		return nil, errmsg.ErrEmailNotActive
 	}
-	// 判断用户密码是否正确
-	if ScryptPw(password) != user.Password {
-		return nil, errmsg.ERROR_PASSWORD_WRONG
-	}
-	return &user, errmsg.SUCCESS
-}
-
-// 根据用户名查找用户id
-func FindUserByName(username any) uint {
-	var user User
-	db.Model(&user).Where("username = ?", username).First(&user)
-	return user.ID
-}
-
-// 根据激活码查找用户，并激活
-func UpdateUserStatus(code string) int {
-	err = db.Model(&User{}).Where("code = ?", code).UpdateColumn("status", "Y").Error
+	passwordMatch, err := CheckPassword(user.Password, password)
 	if err != nil {
-		return errmsg.ERROR_EMAIL_ACTIVE
+		return nil, err
 	}
-	// 激活
-	return errmsg.SUCCESS
+	if !passwordMatch {
+		return nil, errmsg.ErrPasswordWrong
+	}
+	return &user, nil
 }
 
-// 通过邮箱查找用户
-func GetUserByEmail(email string) (User, int) {
+// FindUserByName 通过用户名查找用户 (JWT 中间件会用到)
+func FindUserByName(name string) (*User, error) {
+	var user User
+	err := db.Where("username = ?", name).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrUserNotExist
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetUserByEmail 通过邮箱地址查找用户 (邮箱登录会用到)
+func GetUserByEmail(email string) (*User, error) {
 	var user User
 	err := db.Where("email = ?", email).First(&user).Error
 	if err != nil {
-		return user, errmsg.ERROR_USER_NOT_EXIST
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrUserNotExist
+		}
+		return nil, err
 	}
-	return user, errmsg.SUCCESS
+	return &user, nil
 }

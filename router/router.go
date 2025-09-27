@@ -27,86 +27,60 @@ func InitRouter() {
 	// 	c.File("./static/front/dist/index.html")
 	// })
 
-	// 设置中间件，以下操作需要权限
-	auth := r.Group("api/v1")
-	auth.Use(middleware.JwtToken())
+	// --- API 路由 ---
+	apiV1 := r.Group("api/v1")
+
+	// --- 公共接口 (无需 Token 验证) ---
 	{
-		/* 用户模块的路由接口 */
+		// 用户/认证模块
+		apiV1.POST("register", controller.Register)           // 用户注册 | 参数来源: JSON 请求体
+		apiV1.POST("login", controller.Login)                 // 用户名密码登录 | 参数来源: JSON 请求体
+		apiV1.POST("login/email", controller.LoginByEmail)    // 邮箱验证码登录 | 参数来源: JSON 请求体
+		apiV1.POST("email/code", controller.SendEmailForCode) // 发送邮箱验证码 | 参数来源: JSON 请求体
+		apiV1.GET("active", controller.ActiveEmail)           // 邮箱激活链接 | 参数来源: URL 查询参数 (e.g., /active?code=xxx)
 
-		// 查询所有用户
-		auth.POST("users", controller.GetUser)
-		// 查询用户详细信息，包括文章
-		auth.GET("user/:id", controller.GetUserInfo)
-		// 添加用户
-		auth.POST("user/add", controller.AddUser)
-		// 编辑用户信息
-		auth.POST("user/update", controller.EditUser)
-		// 删除用户
-		auth.DELETE("user/:id", controller.DeleteUser)
+		// 分类模块
+		apiV1.GET("categories", controller.GetCategory)                 // 获取所有分类列表 | 参数来源: URL 查询参数 (e.g., /categories?pagesize=10)
+		apiV1.GET("categories/:id", controller.FindCategoryById)        // 获取单个分类信息 | 参数来源: URL 路径参数 (e.g., /categories/123)
+		apiV1.GET("categories/:id/articles", controller.GetCateArticle) // 获取某分类下的所有文章 | 参数来源: URL 路径参数 (+ 可选查询参数分页)
 
-		/* 分类模块的路由接口 */
-		// 添加分类
-		auth.POST("category/add", controller.AddCategory)
-		// 编辑分类信息
-		auth.POST("category/:id", controller.EditCategory)
-		// 删除分类
-		auth.DELETE("category/:id", controller.DeleteCategory)
+		// 文章模块
+		apiV1.GET("articles", controller.GetArticle)         // 获取文章列表 | 参数来源: URL 查询参数
+		apiV1.GET("articles/:id", controller.GetArticleInfo) // 获取单篇文章详情 | 参数来源: URL 路径参数
 
-		/* 文章模块的路由接口 */
-		// 添加文章
-		auth.POST("article/add", controller.AddArticle)
-		// 删除文章
-		auth.POST("article/delete", controller.DeleteArticle)
-
-		// 添加评论
-		auth.POST("comment", controller.AddComment)
-		// 编辑文章
-		auth.PUT("article/:id", controller.EditArticle)
-		// 删除文章
-		auth.DELETE("article/:id", controller.DeleteArticle)
-		// 删除评论
-		auth.DELETE("comment/:id", controller.DeleteComment)
-
-		// 上传文件
-		auth.POST("upload", controller.Upload)
-		// 更新个人设置
-		auth.PUT("profile", controller.UpdateProfile)
-
+		// 评论模块
+		// apiV1.GET("articles/:id/comments", controller.GetCommetns) // 获取某文章下的所有评论 | 参数来源: URL 路径参数
 	}
 
-	route := r.Group("api/v1")
+	// --- 权限接口 (需要 JWT Token 验证) ---
+	apiV1.Use(middleware.JwtToken())
 	{
-		// // 添加用户
-		// route.POST("user/add", controller.AddUser)
-		// // 查询所有用户
-		// route.POST("users", controller.GetUser)
-		// // 查询用户详细信息，包括文章
-		// route.GET("user/:id", controller.GetUserInfo)
+		// 用户/个人模块
+		apiV1.GET("users", controller.GetUser)           // 获取用户列表 | 参数来源: URL 查询参数
+		apiV1.POST("users/add", controller.AddUser)      // 添加用户 | 参数来源: JSON 请求体
+		apiV1.GET("users/:id", controller.GetUserInfo)   // 获取指定用户详情 | 参数来源: URL 路径参数
+		apiV1.PUT("users/:id", controller.EditUser)      // 编辑指定用户信息 | 参数来源: URL 路径参数 + JSON 请求体
+		apiV1.DELETE("users/:id", controller.DeleteUser) // 删除指定用户 | 参数来源: URL 路径参数
 
-		// 查询所有分类
-		route.GET("category", controller.GetCategory)
-		// 通过id查询分类信息
-		route.GET("category/:id", controller.FindCategoryById)
+		apiV1.GET("profile", controller.GetProfile)    // 获取当前登录用户的个人信息 | 参数来源: JWT Token
+		apiV1.PUT("profile", controller.UpdateProfile) // 更新当前登录用户的个人信息 | 参数来源: JSON 请求体
 
-		// 查询所有文章信息
-		route.POST("articles", controller.GetArticle)
-		// 查询某篇文章的详细信息
-		route.GET("article/cate/:id", controller.GetCateArticle)
-		// 查询某文章下的所有评论
-		route.GET("comment/:id", controller.GetCommetns)
+		// 分类模块
+		apiV1.POST("categories", controller.AddCategory)          // 新增分类 | 参数来源: JSON 请求体
+		apiV1.PUT("categories/:id", controller.EditCategory)      // 编辑分类 | 参数来源: URL 路径参数 + JSON 请求体
+		apiV1.DELETE("categories/:id", controller.DeleteCategory) // 删除分类 | 参数来源: URL 路径参数
 
-		// 登陆
-		route.POST("login", controller.Login)
-		// 注册用户
-		route.POST("register", controller.AddUser)
-		// 邮件激活
-		route.GET("active", controller.ActiveEmail)
-		// 登陆发送邮件，需要参数email
-		route.GET("sendmail", controller.SendEmailForCode)
-		// 使用邮箱登陆，需要参数email和验证码
-		route.GET("loginbyemail", controller.LoginByEmail)
-		// 获取个人信息
-		route.GET("profile", controller.GetProfile)
+		// 文章模块
+		apiV1.POST("articles", controller.AddArticle)          // 新增文章 | 参数来源: JSON 请求体
+		apiV1.PUT("articles/:id", controller.EditArticle)      // 编辑文章 | 参数来源: URL 路径参数 + JSON 请求体
+		apiV1.DELETE("articles/:id", controller.DeleteArticle) // 删除文章 | 参数来源: URL 路径参数
+
+		// 评论模块
+		apiV1.POST("comments", controller.AddComment)          // 发表评论 | 参数来源: JSON 请求体
+		apiV1.DELETE("comments/:id", controller.DeleteComment) // 删除评论 | 参数来源: URL 路径参数
+
+		// 文件上传
+		apiV1.POST("upload", controller.Upload) // 上传文件 | 参数来源: 表单 (multipart/form-data)
 	}
 
 	r.Run(utils.HttpPort)

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"goblog/utils/errmsg"
 
 	"gorm.io/gorm"
@@ -11,130 +12,186 @@ type Article struct {
 	Title    string   `gorm:"type:varchar(100);not null" json:"title"`
 	Cid      int      `gorm:"type:int;notnull" json:"cid"`
 	Desc     string   `gorm:"type:varchar(200)" json:"desc"`
-	Content  string   `gonm:"type:longtext;not null" json:"content"`
-	Img      string   `gorn:"type:varchar(200)" json:"img"`
+	Content  string   `gorm:"type:longtext;not null" json:"content"`
+	Img      string   `gorm:"type:varchar(200)" json:"img"`
 	Category Category `gorm:"foreignkey:Cid"`
 	Comments []Comment
 }
 
-// 添加文章
-func CreateArticle(data *Article) int {
-	err = db.Create(&data).Error
-	if err != nil {
-		return errmsg.ERROR // 500
-	}
-	return errmsg.SUCCESS
+type Comment struct {
+	gorm.Model
+	Commentator string `gorm:"type:varchar(20);not null" json:"commentator"`
+	Content     string `gorm:"type:longtext;not null" json:"content"`
+	ArticleID   int    `gorm:"type:int;not null" json:"article_id"`
+	ParentID    int    `gorm:"type:int" json:"parent_id"`
 }
 
-// 添加评论
-func CreateComment(id int, data Comment) int {
+// CreateArticle 添加文章
+func CreateArticle(data *Article) error {
+	if err := db.Create(&data).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateComment 添加评论
+func CreateComment(articleId int, data *Comment) error {
 	var article Article
-	err = db.Model(&Article{}).Where("id = ?", id).First(&article).Error
-	if err != nil {
-		return errmsg.ERROR_ARTICLE_NOT_EXIST
+	if err := db.First(&article, articleId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errmsg.ErrArticleNotExist
+		}
+		return err
 	}
-	article.Comments = append(article.Comments, data)
-	err = db.Save(&article).Error
-	if err != nil {
-		return errmsg.ERROR
+	data.ArticleID = articleId
+	if err := db.Create(&data).Error; err != nil {
+		return err
 	}
-	return errmsg.SUCCESS
+	return nil
 }
 
-// 查询文章下的所有评论
-func GetCommentsByArticleId(id int) ([]Comment, int) {
+// GetCommentsByArticleId 查询文章下的所有评论
+func GetCommentsByArticleId(id int) ([]Comment, error) {
+	var article Article
+	if err := db.First(&article, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrArticleNotExist
+		}
+		return nil, err
+	}
+
 	var comments []Comment
-	var article Article
-	var _ = db.Model(&Article{}).Where("id = ?", id).First(&article).Error
-	err = db.Where("article_id = ?", id).Find(&comments).Error
-	if article.ID == 0 {
-		return nil, errmsg.ERROR_ARTICLE_NOT_EXIST
+	err := db.Where("article_id = ?", id).Find(&comments).Error
+	if err != nil {
+		return nil, err
 	}
+
+	// 注意：按照业务逻辑，文章没有评论不应该算作一个错误
 	if len(comments) == 0 {
-		return nil, errmsg.ERROR_ARTICLE_NO_COMMENTS
+		return nil, errmsg.ErrArticleNoComment // 200
 	}
-	return comments, errmsg.SUCCESS
+
+	return comments, nil
 }
 
-// 分页查询文章列表
-func GetArticles(title string, pageSize int, pageNum int) ([]Article, int, int) {
+// DeleteComment 删除评论
+func DeleteComment(id int) error {
+	if err := db.Where("id = ?", id).Delete(&Comment{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetArticles 分页查询文章列表
+func GetArticles(title string, pageSize int, pageNum int) ([]Article, int, error) {
 	var articles []Article
 	var total int64
 	DB := db.Model(&Article{})
+
 	if title != "" {
-		DB = DB.Where("title like ?", "%"+title+"%")
+		DB = DB.Where("title LIKE ?", "%"+title+"%")
 	}
-	err = DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&articles).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, errmsg.ERROR, 0
+
+	if err := DB.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	// 查找总数
-	err = DB.Count(&total).Error
-	if err != nil {
-		return nil, errmsg.ERROR, 0
+
+	err := DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Preload("Category").Find(&articles).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, 0, err
 	}
-	return articles, errmsg.SUCCESS, int(total)
+
+	return articles, int(total), nil
 }
 
-// 查询分类下的所有文章
-func GetCateArticle(id int, pageSize int, pageNum int) ([]Article, int, int) {
+// GetCateArticle 查询分类下的所有文章
+func GetCateArticle(id int, pageSize int, pageNum int) ([]Article, int, error) {
+	var cate Category
+	if err := db.First(&cate, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, 0, errmsg.ErrCateNotExist
+		}
+		return nil, 0, err
+	}
+
 	var cateArticleList []Article
 	var total int64
-	DB := db.Model(&Article{})
-	if id > 0 {
-		DB = DB.Where("cid = ?", id)
+	DB := db.Model(&Article{}).Where("cid = ?", id)
+
+	if err := DB.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
+
 	err := DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&cateArticleList).Error
-	// 查找总数
-	_ = DB.Count(&total).Error
-	if err != nil {
-		return cateArticleList, errmsg.ERROR_CATE_NOT_EXIST, 0
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, 0, err
 	}
-	return cateArticleList, errmsg.SUCCESS, int(total)
+
+	return cateArticleList, int(total), nil
 }
 
-// 查询单个文章详细信息
-func GetArticleInfo(id int) (Article, int) {
+// GetArticleInfo 查询单个文章详细信息
+func GetArticleInfo(id int) (*Article, error) {
 	var article Article
-
-	// 1. 先查询文章主题
-	err := db.Where("id = ?", id).First(&article).Error
+	err := db.Preload("Category").Preload("Comments").First(&article, id).Error
 	if err != nil {
-		return article, errmsg.ERROR_ARTICLE_NOT_EXIST
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrArticleNotExist
+		}
+		return nil, err
 	}
-	// 2. 文章存在，再查询并附其评论
-	comments, _ := GetCommentsByArticleId(id) // 这里可以暂时忽略错误，因为文章可能没有评论
-	if len(comments) > 0 {
-		// 使用建议的方式高效地附加评论
-		article.Comments = comments
-	}
-
-	return article, errmsg.SUCCESS
+	return &article, nil
 }
 
-// 编辑文章信息
-func EditArticle(id int, data *Article) int {
-	// 利用map集合更新
-	var maps = make(map[string]any)
-	maps["title"] = data.Title
-	maps["cid"] = data.Cid
-	maps["desc"] = data.Desc
-	maps["content"] = data.Content
-	maps["img"] = data.Img
-	err = db.Model(&Article{}).Where("id = ?", id).Updates(maps).Error
-	if err != nil {
-		return errmsg.ERROR
+// EditArticle 编辑文章信息
+func EditArticle(id int, data *Article) error {
+	var article Article
+	if err := db.First(&article, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errmsg.ErrArticleNotExist
+		}
+		return err
 	}
-	return errmsg.SUCCESS
+
+	updates := map[string]interface{}{
+		"title":   data.Title,
+		"cid":     data.Cid,
+		"desc":    data.Desc,
+		"content": data.Content,
+		"img":     data.Img,
+	}
+	if err := db.Model(&Article{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
-// 删除文章
-func DeleteArticle(id int) int {
-	// 删除文章时，需要把与之相关联的中间表也删除
-	DeleteMidByArticleId(id)
-	err = db.Where("id = ?", id).Delete(&Article{}).Error
-	if err != nil {
-		return errmsg.ERROR
-	}
-	return errmsg.SUCCESS
+// DeleteArticle 删除文章 (使用事务)
+func DeleteArticle(id int) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		var article Article
+		if err := tx.First(&article, id).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errmsg.ErrArticleNotExist
+			}
+			return err
+		}
+
+		// 删除文章下的所有评论
+		if err := tx.Where("article_id = ?", id).Delete(&Comment{}).Error; err != nil {
+			return err
+		}
+
+		// 删除文章本身
+		if err := tx.Delete(&Article{}, id).Error; err != nil {
+			return err
+		}
+
+		// 如果有其他关联表（如 UserArticle），也应在此处删除
+		if err := tx.Where("article_id = ?", id).Delete(&UserArticle{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }

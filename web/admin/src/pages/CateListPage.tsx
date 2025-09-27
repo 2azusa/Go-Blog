@@ -1,203 +1,203 @@
 import { useState, useEffect } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { categoryApi } from '../services/api';
-import type { ICategory } from '../utils/types';
 import {
-  Box,
-  Typography,
-  Paper,
+  Card,
+  List,
   Alert,
-  CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
+  Pagination,
+  Divider,
   Button,
-  IconButton,
-  // --- 步骤 1: 导入 Dialog 相关组件 ---
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-} from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
-import CateEditModal from '../layout/CateEditModal';
-import type { ISaveCategoryData } from '../layout/CateEditModal';
+  Space,
+  Empty,
+  Modal,
+  Form,
+  Input
+} from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import type { ICategory, IReqFindCate } from '../utils/types';
 
+// --- 步骤 1: 迁移 CategoryAddModal 组件 ---
+interface ICategoryAddModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (newCategoryName: string) => void;
+  // 添加一个 loading 状态，用于在保存时显示按钮加载动画
+  loading: boolean;
+}
+
+const CategoryAddModal: React.FC<ICategoryAddModalProps> = ({ open, onClose, onSave, loading }) => {
+  const [form] = Form.useForm();
+
+  // 当弹窗关闭时，清空表单，避免下次打开时残留数据
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+    }
+  }, [open, form]);
+
+  const handleOk = () => {
+    form
+      .validateFields()
+      .then(values => {
+        onSave(values.name);
+      })
+      .catch(info => {
+        console.log('Validate Failed:', info);
+      });
+  };
+
+  return (
+    <Modal
+      open={open}
+      title="添加新分类"
+      okText="保存"
+      cancelText="取消"
+      onCancel={onClose}
+      onOk={handleOk}
+      confirmLoading={loading} // 将外部 loading 状态绑定到确认按钮
+      destroyOnClose // 关闭时销毁 Modal 里的子元素
+    >
+      <Form form={form} layout="vertical" name="categoryAddForm">
+        <Form.Item
+          name="name"
+          label="分类名称"
+          rules={[{ required: true, message: '分类名称不能为空!' }]}
+        >
+          <Input placeholder="请输入分类名称" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
+// --- 步骤 2: 迁移 CateListPage 页面 ---
 const CateListPage = () => {
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false); // 用于添加分类时的 loading 状态
   const [error, setError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
-
-  // --- 步骤 2: 添加管理删除确认框的状态 ---
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [deletingCategory, setDeletingCategory] = useState<ICategory | null>(null);
-
-  // 获取所有分类
-  const fetchCategories = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await categoryApi.getCategories();
-      const result = response.data;
-      if (result && result.status === 200) {
-        setCategories(result.data || []);
-      } else {
-        setError(result.message || '获取分类列表失败');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || '发生网络错误');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // antd 分页从 1 开始
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCategories, setTotalCategories] = useState(0);
+  
+  // 用于触发数据刷新的状态
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    const fetchCategories = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const requestData: IReqFindCate  = {
+          pagenum: page, // 直接使用 state 中的 page
+          pagesize: pageSize,
+        };
+        const response = await categoryApi.getCategories(requestData);
+        const result = response.data;
 
-  // --- Modal Control Handlers ---
-  const handleOpenAddModal = () => {
-    setEditingCategory(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (category: ICategory) => {
-    setEditingCategory(category);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  // --- 步骤 3: 更新删除流程 ---
-
-  // 打开确认删除对话框
-  const handleOpenConfirmDialog = (category: ICategory) => {
-    setDeletingCategory(category);
-    setIsConfirmOpen(true);
-  };
-
-  // 关闭确认删除对话框
-  const handleCloseConfirmDialog = () => {
-    setIsConfirmOpen(false);
-    setDeletingCategory(null);
-  };
-
-  // 确认执行删除操作
-  const handleConfirmDelete = async () => {
-    if (!deletingCategory) return;
-
-    setError(null);
-    try {
-      await categoryApi.deleteCategory(deletingCategory.id);
-      fetchCategories(); // 删除成功后刷新列表
-    } catch (err: any) {
-      setError(err.response?.data?.message || '删除失败');
-    } finally {
-      handleCloseConfirmDialog(); // 无论成功失败，都关闭对话框
-    }
-  };
-
-
-  // --- API Operation Handlers ---
-  const handleSaveCategory = async (data: ISaveCategoryData) => {
-    setError(null);
-    try {
-      if (data.id) {
-        await categoryApi.editCategory(data.id, { name: data.name });
-      } else {
-        await categoryApi.addCategory({ name: data.name });
+        if (result && result.status === 200) {
+          setCategories(result.data || []);
+          setTotalCategories(result.total || 0);
+        } else {
+          setError(result.message || '获取分类列表失败');
+          setCategories([]);
+          setTotalCategories(0);
+        }
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.message || err.message || '网络错误';
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
       }
-      handleCloseModal();
-      fetchCategories();
+    };
+
+    fetchCategories();
+  }, [page, pageSize, refreshTrigger]);
+
+  const handleAddCategory = async (newCategoryName: string) => {
+    setSaving(true);
+    try {
+      await categoryApi.addCategory({ name: newCategoryName });
+      setIsAddModalOpen(false);
+      // 如果当前不在第一页，添加成功后最好跳回第一页查看最新项
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        setRefreshTrigger(prev => prev + 1);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || '操作失败');
+      const errorMessage = err.response?.data?.message || err.message || '添加分类失败';
+      // 可以在 Modal 内部显示错误，或者在页面顶部显示
+      setError(errorMessage);
+    } finally {
+      setSaving(false);
     }
+  };
+  
+  const handlePageChange = (newPage: number, newPageSize: number) => {
+    setPage(newPage);
+    setPageSize(newPageSize);
   };
 
   const renderContent = () => {
-    if (loading) {
-      return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
-    }
-    if (categories.length === 0) {
-      return <Typography sx={{ mt: 2, textAlign: 'center' }}>暂无分类数据</Typography>;
-    }
+    if (error) return <Alert message={error} type="error" showIcon style={{ marginTop: 16 }} />;
+    if (!loading && !categories.length) return <Empty description="暂无分类数据" />;
 
     return (
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>分类名称</TableCell>
-              <TableCell align="right">操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {categories.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell>{category.id}</TableCell>
-                <TableCell>{category.name}</TableCell>
-                <TableCell align="right">
-                  <IconButton size="small" onClick={() => handleOpenEditModal(category)}><EditIcon fontSize="small" /></IconButton>
-                  {/* 步骤 4: 修改删除按钮的点击事件 */}
-                  <IconButton size="small" onClick={() => handleOpenConfirmDialog(category)}><DeleteIcon fontSize="small" /></IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <List
+        loading={loading}
+        itemLayout="horizontal"
+        dataSource={categories}
+        renderItem={(category) => (
+          <List.Item>
+            <List.Item.Meta
+              title={<RouterLink to={`/catedetail/${category.id}`}>{category.name}</RouterLink>}
+              description={`ID: ${category.id}`}
+            />
+          </List.Item>
+        )}
+      />
     );
   };
 
   return (
     <>
-      <Box sx={{ p: 3 }}>
-        <Paper elevation={3} sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h5" component="h1">
-              分类管理
-            </Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAddModal}>
+      <div style={{ padding: 24, maxWidth: 900, margin: 'auto' }}>
+        <Card
+          title="分类管理"
+          extra={
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalOpen(true)}>
               添加分类
             </Button>
-          </Box>
-          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-          {renderContent()}
-        </Paper>
-      </Box>
-
-      <CateEditModal
-        open={isModalOpen}
-        onClose={handleCloseModal}
-        category={editingCategory}
-        onSave={handleSaveCategory}
+          }
+        >
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Divider style={{ margin: 0 }} />
+            {renderContent()}
+            <Pagination
+              style={{ marginTop: 20, textAlign: 'right' }}
+              current={page}
+              pageSize={pageSize}
+              total={totalCategories}
+              onChange={handlePageChange}
+              showSizeChanger
+              showQuickJumper
+              showTotal={(total) => `共 ${total} 条`}
+              pageSizeOptions={[5, 10, 15, 25]}
+            />
+          </Space>
+        </Card>
+      </div>
+      <CategoryAddModal 
+        open={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        onSave={handleAddCategory}
+        loading={saving}
       />
-
-      {/* 步骤 5: 添加 Dialog 组件到 JSX 中 */}
-      <Dialog open={isConfirmOpen} onClose={handleCloseConfirmDialog}>
-        <DialogTitle>确认删除</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            你确定要永久删除分类 "{deletingCategory?.name}" 吗？
-            此操作不可撤销，该分类下的文章将变为“未分类”。
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmDialog}>取消</Button>
-          <Button onClick={handleConfirmDelete} color="error" autoFocus>
-            确认删除
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };

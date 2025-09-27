@@ -1,35 +1,29 @@
 package model
 
-import "goblog/utils/errmsg"
+// 显式指定表名
+func (UserArticle) TableName() string {
+	return "user_article"
+}
 
+// 在连接表中，article_id 和 user_id 的组合通常构成复合主键，
 type UserArticle struct {
-	ArticleId uint `gorm:"type:not null" json:"article_id"`
-	UserId    uint `gorm:"type:not null" json:"user_id"`
+	ArticleId uint `gorm:"primaryKey" json:"article_id"`
+	UserId    uint `gorm:"primaryKey" json:"user_id"`
 }
 
-// 创建中间表
-func CreateUserArticle(userArticle *UserArticle) int {
-	err = db.Model(&UserArticle{}).Create(&userArticle).Error
-	if err != nil {
-		return errmsg.ERROR // 500
-	}
-	return errmsg.SUCCESS
+// CreateUserArticle 在 user_article 连接表中创建一条新记录。
+func CreateUserArticle(userArticle *UserArticle) error {
+	// GORM 链式调用的 .Error 属性在成功时返回 nil，失败时返回 error。
+	return db.Create(userArticle).Error
 }
 
-// 根据用户id删除中间表
-func DeleteMidByUserId(id int) int {
-	err = db.Model(&UserArticle{}).Where("user_id = ?", id).Delete(&UserArticle{}).Error
-	if err != nil {
-		return errmsg.ERROR // 500
-	}
-	return errmsg.SUCCESS
+// DeleteMidByUserId 删除某个特定用户的所有关联记录。
+func DeleteMidByUserId(userId uint) error {
+	// 这会执行批量删除。传入结构体用于指定操作的表。
+	return db.Where("user_id = ?", userId).Delete(&UserArticle{}).Error
 }
 
-// 根据文章id删除中间表
-func DeleteMidByArticleId(id int) int {
-	err = db.Model(&UserArticle{}).Where("article_id", id).Delete(&UserArticle{}).Error
-	if err != nil {
-		return errmsg.ERROR // 500
-	}
-	return errmsg.SUCCESS
+// DeleteMidByArticleId 删除某篇特定文章的所有关联记录。
+func DeleteMidByArticleId(articleId uint) error {
+	return db.Where("article_id = ?", articleId).Delete(&UserArticle{}).Error
 }

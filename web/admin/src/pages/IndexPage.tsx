@@ -1,14 +1,27 @@
+import { Result, Button } from 'antd';
+import { SmileOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+
 const IndexPage = () => {
-    return (
-        <div style={{
-            display: 'flex',
-            justifyContent: 'center', 
-            alignItems: 'center',     
-            height: '60vh'            
-        }}>
-            <h3>欢迎来到 Go-Blog 后台管理页面</h3>
-        </div>
-    );
+  return (
+    <Result
+      icon={<SmileOutlined />}
+      title="欢迎使用 Azusa's Blog 后台管理系统"
+      extra={
+        <Button type="primary">
+          <Link to="/articlelist">开始管理文章</Link>
+        </Button>
+      }
+      style={{
+        // 让 Result 组件在内容区域内垂直居中
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    />
+  );
 };
 
 export default IndexPage;

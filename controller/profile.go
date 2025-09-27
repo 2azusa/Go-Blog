@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"goblog/dto"
 	"goblog/model"
 	"goblog/utils/errmsg"
 	"net/http"
@@ -8,33 +9,63 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetProfile 获取当前登录用户的个人信息
 func GetProfile(c *gin.Context) {
-	profile, code := model.GetProfile(c)
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    profile,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
+	// 1. 从 JWT 中间件获取用户 ID
+	userID, _ := c.Get("userID")
 
-func UpdateProfile(c *gin.Context) {
-	var req model.Profile
-	_ = c.ShouldBindJSON(&req)
-
-	profile, code := model.GetProfile(c)
-	if code != errmsg.SUCCESS {
-		c.JSON(http.StatusOK, gin.H{
-			"staust":  code,
-			"message": errmsg.GetErrMsg(code),
-		})
+	// 2. 调用 Model 函数
+	profile, err := model.GetProfileByUserID(userID.(uint))
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	req.ID = profile.ID
-	code = model.UpdateProfile(c, req.ID, &req)
+	// 4. 准备响应 DTO
+	rsp := dto.RspProfile{
+		RspUser: dto.RspUser{}, // 实际项目中应填充用户信息
+		Name:    profile.Name,
+		Desc:    profile.Desc,
+		WeChat:  profile.WeChat,
+		Weibo:   profile.Weibo,
+		Img:     profile.Img,
+		Avatar:  profile.Avatar,
+	}
 
+	// 5. 成功响应
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
+		"status":  errmsg.SUCCESS.Status,
+		"data":    rsp,
+		"message": errmsg.SUCCESS.Message,
+	})
+}
+
+// UpdateProfile 更新当前登录用户的个人信息
+func UpdateProfile(c *gin.Context) {
+	// 1. 从 JWT 中获取用户 ID
+	userID, _ := c.Get("userID")
+
+	// 2. 绑定并校验请求体
+	var req dto.ReqUpdateProfile
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// --- 已优化：使用帮助函数 ---
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	// 3. 调用 Model 函数
+	err := model.UpdateProfileByUserID(userID.(uint), &req)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	// 5. 成功响应 - 已优化
+	c.JSON(http.StatusOK, gin.H{
+		"status":  errmsg.UpdateProfileSuccess.Status,
+		"message": errmsg.UpdateProfileSuccess.Message,
 	})
 }

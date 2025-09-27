@@ -1,15 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usersApi } from '../services/api';
-import { 
-  Box, Typography, Paper, CircularProgress, Alert, List, ListItem, 
-  ListItemText, Divider, Button, Dialog, DialogActions, DialogContent, 
-  DialogContentText, DialogTitle
-} from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import {
+  Card,
+  Spin,
+  Alert,
+  Result,
+  Button,
+  Divider,
+  Descriptions,
+  List,
+  Typography,
+  Space,
+  Modal,
+  Empty
+} from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+
 import type { IUser, IArticle, IReqEditUser } from '../utils/types';
-import UserEditModal from '../layout/UserEditModal';
+import UserEditModal from '../components/UserEditModal'; 
+const { Title } = Typography;
 
 const UserDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,9 +30,10 @@ const UserDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  
+  // --- 关键改动: 不再需要 isConfirmOpen state ---
+
   useEffect(() => {
+    // ... fetchUserInfo 逻辑完全不变
     const fetchUserInfo = async () => {
       if (!id) return;
       setLoading(true);
@@ -30,7 +41,6 @@ const UserDetailPage = () => {
       try {
         const response = await usersApi.getUserInfo(parseInt(id, 10));
         const result = response.data;
-
         if (result && result.status === 200) {
           setUser(result.data);
         } else {
@@ -46,6 +56,7 @@ const UserDetailPage = () => {
     fetchUserInfo();
   }, [id]);
 
+  // ... handleSaveUser 逻辑不变
   const handleSaveUser = async (updatedUser: IUser) => {
     try {
       const postData: IReqEditUser = {
@@ -54,11 +65,9 @@ const UserDetailPage = () => {
         email: updatedUser.email,
         role: updatedUser.role,
       };
-
-      const response = await usersApi.updateUser(postData);
-      
+      const response = await usersApi.updateUser(updatedUser.ID, postData);
       if (response.data && response.data.status === 200) {
-        setUser(response.data.data); 
+        setUser(response.data.data);
       } else {
         setError(response.data.message || '更新用户失败');
       }
@@ -78,57 +87,86 @@ const UserDetailPage = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || '删除用户失败';
       setError(errorMessage);
-    } finally {
-      setIsConfirmOpen(false);
+      // 可以在这里加一个 antd 的 message.error(errorMessage) 提示
     }
   };
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
-  if (error) return <Alert severity="error" sx={{ m: 3 }}>{error}</Alert>;
-  if (!user) return <Typography sx={{ m: 3, textAlign: 'center' }}>未找到该用户</Typography>;
-
+  // --- 使用 Modal.confirm 替代 Dialog ---
+  const showDeleteConfirm = () => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `你确定要永久删除用户 "${user?.username}" 吗？此操作不可撤销。`,
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk() {
+        return handleDeleteUser();
+      },
+    });
+  };
+  
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
   };
+  
+  if (error) return <Alert message={error} type="error" showIcon style={{ margin: 24 }} />;
+  if (!loading && !user) return <Result status="404" title="未找到该用户" subTitle="抱歉，我们找不到您要查找的用户信息。" />;
 
   return (
     <>
-      <Box sx={{ p: 3, maxWidth: 800, margin: 'auto' }}>
-        <Paper elevation={3} sx={{ p: 3, wordBreak: 'break-word' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h5" component="h1" gutterBottom>用户详情</Typography>
-            <Box>
-              <Button variant="contained" startIcon={<EditIcon />} onClick={() => setIsModalOpen(true)} sx={{ mr: 1 }}>修改信息</Button>
-              <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => setIsConfirmOpen(true)}>删除用户</Button>
-            </Box>
-          </Box>
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>ID:</strong> {user.ID}</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>用户名:</strong> {user.username}</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>邮箱:</strong> {user.email}</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>角色:</strong> {user.role === 1 ? '管理员' : '普通用户'}</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>状态:</strong> {user.status}</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>注册时间:</strong> {formatDate(user.CreatedAt)}</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><strong>最后更新:</strong> {formatDate(user.UpdatedAt)}</Typography>
-          <Divider sx={{ my: 3 }} />
-          <Box>
-            <Typography variant="h6" gutterBottom>该用户的文章列表:</Typography>
-            {user.articles && user.articles.length > 0 ? (
-              <List>{user.articles.map((article: IArticle) => (<ListItem key={article.ID} divider><ListItemText primary={article.title} secondary={`创建于: ${formatDate(article.CreatedAt)}`} /></ListItem>))}</List>
-            ) : (<Typography>该用户暂无文章</Typography>)}
-          </Box>
-        </Paper>
-      </Box>
+      <div style={{ padding: 24, maxWidth: 800, margin: 'auto' }}>
+        <Spin spinning={loading}>
+          <Card
+            title="用户详情"
+            extra={
+              <Space>
+                <Button type="primary" icon={<EditOutlined />} onClick={() => setIsModalOpen(true)}>
+                  修改信息
+                </Button>
+                <Button danger icon={<DeleteOutlined />} onClick={showDeleteConfirm}>
+                  删除用户
+                </Button>
+              </Space>
+            }
+          >
+            {user && (
+              <>
+                <Descriptions bordered column={1}>
+                  <Descriptions.Item label="ID">{user.ID}</Descriptions.Item>
+                  <Descriptions.Item label="用户名">{user.username}</Descriptions.Item>
+                  <Descriptions.Item label="邮箱">{user.email}</Descriptions.Item>
+                  <Descriptions.Item label="角色">{user.role === 1 ? '管理员' : '普通用户'}</Descriptions.Item>
+                  <Descriptions.Item label="状态">{user.status}</Descriptions.Item>
+                  <Descriptions.Item label="注册时间">{formatDate(user.CreatedAt)}</Descriptions.Item>
+                  <Descriptions.Item label="最后更新">{formatDate(user.UpdatedAt)}</Descriptions.Item>
+                </Descriptions>
+
+                <Divider />
+
+                <Title level={5}>该用户的文章列表:</Title>
+                {user.articles && user.articles.length > 0 ? (
+                  <List
+                    bordered
+                    dataSource={user.articles}
+                    renderItem={(article: IArticle) => (
+                      <List.Item>
+                        <List.Item.Meta
+                          title={article.title}
+                          description={`创建于: ${formatDate(article.CreatedAt)}`}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Empty description="该用户暂无文章" />
+                )}
+              </>
+            )}
+          </Card>
+        </Spin>
+      </div>
       <UserEditModal open={isModalOpen} user={user} onClose={() => setIsModalOpen(false)} onSave={handleSaveUser} />
-      <Dialog open={isConfirmOpen} onClose={() => setIsConfirmOpen(false)}>
-        <DialogTitle>确认删除</DialogTitle>
-        <DialogContent><DialogContentText>你确定要永久删除用户 "{user.username}" 吗？此操作不可撤销。</DialogContentText></DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsConfirmOpen(false)}>取消</Button>
-          <Button onClick={handleDeleteUser} color="error" autoFocus>确认删除</Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };

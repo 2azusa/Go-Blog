@@ -1,3 +1,5 @@
+// 文件路径: controller/article.go
+
 package controller
 
 import (
@@ -10,180 +12,228 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 添加文章
+// AddArticle 添加文章
+// @Router /api/v1/articles [post]
 func AddArticle(c *gin.Context) {
-	var data model.Article
-	var userArticle model.UserArticle
-	_ = c.ShouldBind(&data)
-	code := model.CreateArticle(&data)
+	var req dto.ReqArticle
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	userArticle.ArticleId = data.ID
+	newArticle := &model.Article{
+		Title:   req.Title,
+		Cid:     req.Cid,
+		Desc:    req.Desc,
+		Content: req.Content,
+		Img:     req.Img,
+	}
 
-	userName, _ := c.Get("username")
-	userArticle.UserId = model.FindUserByName(userName)
-	_ = model.CreateUserArticle(&userArticle)
+	if err := model.CreateArticle(newArticle); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    data,
-		"message": errmsg.GetErrMsg(code),
+		"status":  errmsg.CreateArticleSuccess.Status,
+		"data":    newArticle,
+		"message": errmsg.CreateArticleSuccess.Message,
 	})
 }
 
-// 添加评论
-func AddComment(c *gin.Context) {
-	var data model.Comment
-	_ = c.ShouldBindJSON(&data)
-	id := data.ArticleID
-
-	code := model.CreateComment(id, data)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    data,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 删除评论
-func DeleteComment(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-
-	code := model.DeleteComment(id)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 查询单个文章
+// GetArticleInfo 获取单个文章详细信息
+// @Router /api/v1/articles/{id} [get]
 func GetArticleInfo(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidArticleID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	data, code := model.GetArticleInfo(id)
+	article, err := model.GetArticleInfo(id)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    data,
-		"message": errmsg.GetErrMsg(code),
+		"status":  errmsg.SUCCESS.Status,
+		"data":    article,
+		"message": errmsg.SUCCESS.Message,
 	})
 }
 
-// 查询文章下的所有评论
-func GetCommetns(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-
-	data, code := model.GetCommentsByArticleId(id)
-
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    data,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 根据分类查询所有文章
-func GetCateArticle(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
-	pageNum, _ := strconv.Atoi(c.Query("pagenum"))
-	pageSize, _ := strconv.Atoi(c.Query("pagesize"))
-
-	if pageNum == 0 {
-		pageNum = -1
-	}
-	if pageSize == 0 {
-		pageSize = -1
-	}
-
-	data, code, total := model.GetCateArticle(id, pageSize, pageNum)
-	articles := make([]*dto.RspFindArticle, 0)
-	for i := range data {
-		article := &dto.RspFindArticle{
-			ID:        data[i].ID,
-			Title:     data[i].Title,
-			CreatedAt: data[i].CreatedAt,
-			Desc:      data[i].Desc,
-			Content:   data[i].Content,
-			Img:       data[i].Img,
-		}
-		Cate, err := model.FindCategoryById(data[i].Cid)
-		if err != nil {
-			article.Name = ""
-		} else {
-			article.Name = Cate.Name
-		}
-		articles = append(articles, article)
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"data":    articles,
-		"total":   total,
-		"message": errmsg.GetErrMsg(code),
-	})
-}
-
-// 查询文章列表
+// GetArticle 查询文章列表
+// @Router /api/v1/articles [get]
 func GetArticle(c *gin.Context) {
 	var req dto.ReqFindArticle
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindQuery(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	if req.PageSize == 0 {
-		req.PageSize = -1
+	if req.PageSize <= 0 {
+		req.PageSize = 10
 	}
-	if req.PageSize == 0 {
-		req.PageSize = -1
+	if req.PageNum <= 0 {
+		req.PageNum = 1
 	}
-	data, code, total := model.GetArticles(req.Title, req.PageSize, req.PageNum)
 
-	articles := make([]*dto.RspFindArticle, 0)
-	for i := range data {
-		article := &dto.RspFindArticle{
-			ID:        data[i].ID,
-			Title:     data[i].Title,
-			CreatedAt: data[i].CreatedAt,
-			Desc:      data[i].Desc,
-			Content:   data[i].Content,
-			Img:       data[i].Img,
-		}
-		Cate, err := model.FindCategoryById(data[i].Cid)
-		if err != nil {
-			article.Name = ""
-		} else {
-			article.Name = Cate.Name
-		}
-		articles = append(articles, article)
+	articles, total, err := model.GetArticles(req.Title, req.PageSize, req.PageNum)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
+		"status":  errmsg.SUCCESS.Status,
 		"data":    articles,
 		"total":   total,
-		"message": errmsg.GetErrMsg(code),
+		"message": errmsg.SUCCESS.Message,
 	})
 }
 
-// 编辑文章
+// EditArticle 编辑文章
+// @Router /api/v1/articles/{id} [put]
 func EditArticle(c *gin.Context) {
-	var data model.Article
-	id, _ := strconv.Atoi(c.Param("id"))
-	_ = c.ShouldBindJSON(&data)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidArticleID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	code := model.EditArticle(id, &data)
+	var req dto.ReqArticle
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	articleToUpdate := &model.Article{
+		Title:   req.Title,
+		Cid:     req.Cid,
+		Desc:    req.Desc,
+		Content: req.Content,
+		Img:     req.Img,
+	}
+
+	if err := model.EditArticle(id, articleToUpdate); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
+		"status":  errmsg.UpdateArticleSuccess.Status,
+		"message": errmsg.UpdateArticleSuccess.Message,
 	})
 }
 
-// 删除文章
+// DeleteArticle 删除文章
+// @Router /api/v1/articles/{id} [delete]
 func DeleteArticle(c *gin.Context) {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidArticleID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
-	code := model.DeleteArticle(id)
+	if err := model.DeleteArticle(id); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  code,
-		"message": errmsg.GetErrMsg(code),
+		"status":  errmsg.DeleteArticleSuccess.Status,
+		"message": errmsg.DeleteArticleSuccess.Message,
+	})
+}
+
+// GetCommentsByArticleId 获取文章下的所有评论
+// @Router /api/v1/articles/{id}/comments [get]
+func GetCommentsByArticleId(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidArticleID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	comments, err := model.GetCommentsByArticleId(id)
+	if err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  errmsg.SUCCESS.Status,
+		"data":    comments,
+		"message": errmsg.SUCCESS.Message,
+	})
+}
+
+// AddComment 添加评论
+// @Router /api/v1/articles/{id}/comments [post]
+func AddComment(c *gin.Context) {
+	articleId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidArticleID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	var req dto.ReqAddComment
+	if err := c.ShouldBindJSON(&req); err != nil {
+		appErr := errmsg.BindError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	newComment := &model.Comment{
+		Content: req.Content,
+	}
+
+	if err := model.CreateComment(articleId, newComment); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  errmsg.AddCommentSuccess.Status,
+		"data":    newComment,
+		"message": errmsg.AddCommentSuccess.Message,
+	})
+}
+
+// DeleteComment 删除评论
+// @Router /api/v1/comments/{id} [delete]
+func DeleteComment(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appErr := errmsg.ErrInvalidCommentID
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	if err := model.DeleteComment(id); err != nil {
+		appErr := errmsg.FromError(err)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  errmsg.DeleteCommentSuccess.Status,
+		"message": errmsg.DeleteCommentSuccess.Message,
 	})
 }

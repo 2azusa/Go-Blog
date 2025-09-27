@@ -1,89 +1,63 @@
 package model
 
 import (
-	"encoding/json"
-	"fmt"
-	"goblog/utils"
-	"goblog/utils/errmsg"
+	"errors"
+	"goblog/dto"
+	"goblog/utils/errmsg" // 引入 errmsg 包
 
-	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type Profile struct {
 	ID     int    `gorm:"primaryKey" json:"id"`
-	Name   string `gorm:"type:varchar(20)" json:"name"`
+	Name   string `gorm:"type:varchar(50)" json:"name"`
 	Desc   string `gorm:"type:varchar(200)" json:"desc"`
-	QqChat string `gorm:"type:varchar(32)" json:"qq_chat"`
-	WeChat string `gorm:"ype:varchar(32)" json:"wechat"`
-	Weibo  string `gorm:"type:varchar(32)" json:"weibo"`
+	WeChat string `gorm:"type:varchar(50)" json:"wechat"`
+	Weibo  string `gorm:"type:varchar(50)" json:"weibo"`
 	Email  string `gorm:"type:varchar(32)" json:"email"`
-	Img    string `gorm:"type:varchar(80)" json:"img"`
-	Avatar string `gorm:"type:varchar(80)" json:"avatar"`
+	Img    string `gorm:"type:varchar(255)" json:"img"`
+	Avatar string `gorm:"type:varchar(255)" json:"avatar"`
 }
 
-// 根据id获取个人信息
-func GetProfileById(id int) (*Profile, int) {
+// GetProfileByUserID 根据用户ID获取个人信息
+func GetProfileByUserID(userID uint) (*Profile, error) {
 	var profile Profile
-	err = db.Model(&profile).Where("ID = ?", id).First(&profile).Error
+	err := db.First(&profile, userID).Error
 	if err != nil {
-		return nil, errmsg.ERROR
-	}
-	return &profile, errmsg.SUCCESS
-}
-
-// 获取个人信息
-func GetProfile(c *gin.Context) (*Profile, int) {
-	var profile *Profile
-	sessionId, err := c.Cookie(SessionName)
-	if err != nil {
-		return nil, errmsg.ERROR
-	}
-	result, err := Redis.Get(sessionId).Result()
-	if err != nil {
-		return nil, errmsg.ERROR
-	}
-	err = json.Unmarshal([]byte(result), &profile)
-	if err != nil {
-		fmt.Println("unmarshall json false")
-	}
-	return profile, errmsg.SUCCESS
-}
-
-// 更新个人信息
-func UpdateProfile(c *gin.Context, id int, profile *Profile) int {
-	var _profile *Profile
-	err = db.Model(&Profile{}).Where("ID = ?", id).Updates(profile).Error
-	if err != nil {
-		return errmsg.ERROR
-	}
-	sessionId, err := c.Cookie(SessionName)
-	if err != nil {
-		return errmsg.ERROR
-	}
-	result, err := Redis.Get(sessionId).Result()
-	if err != nil {
-		return errmsg.ERROR
-	}
-	err = json.Unmarshal([]byte(result), &_profile)
-	if err != nil {
-		fmt.Println("unmarshall json false")
-	}
-	if _profile.ID == profile.ID {
-		// 需要更新redis
-		profileJson, _ := json.Marshal(profile)
-		_, err := Redis.Set(sessionId, string(profileJson), utils.Expiration).Result()
-		if err != nil {
-			return errmsg.ERROR
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 返回预定义的业务错误，而不是通用的 gorm 错误
+			return nil, errmsg.ErrUserNotExist
 		}
+		return nil, err // 其他数据库错误直接返回
 	}
-	return errmsg.SUCCESS
+	return &profile, nil
 }
 
-// 新建个人信息
-func CreateProfile(profile *Profile) int {
-	err = db.Model(&Profile{}).Create(&profile).Error
-	if err != nil {
-		return errmsg.ERROR
+// UpdateProfileByUserID 根据用户ID更新个人信息
+func UpdateProfileByUserID(userID uint, req *dto.ReqUpdateProfile) error {
+	// 使用 map 来更新，这是一种常见的安全做法
+	updates := map[string]interface{}{
+		"name":    req.Name,
+		"desc":    req.Desc,
+		"we_chat": req.WeChat, // 注意数据库蛇形命名与 struct 字段的映射
+		"weibo":   req.Weibo,
+		"img":     req.Img,
+		"avatar":  req.Avatar,
 	}
-	return errmsg.SUCCESS
+
+	result := db.Model(&Profile{}).Where("id = ?", userID).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// 如果更新影响的行数为0，说明该 Profile 不存在
+	if result.RowsAffected == 0 {
+		return errmsg.ErrUserNotExist
+	}
+	return nil
+}
+
+// CreateProfile 新建个人信息 (在用户注册时调用)
+func CreateProfile(profile *Profile) error {
+	return db.Create(profile).Error
 }

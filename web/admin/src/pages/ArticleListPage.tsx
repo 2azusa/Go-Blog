@@ -1,192 +1,168 @@
-// src/pages/ArticleListPage.tsx
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { articlesApi } from '../services/api';
-import type { IRspFindArticle, IReqFindArticle } from '../utils/types'; // 引入标准类型
+import type { IRspFindArticle, IReqFindArticle } from '../utils/types';
 import {
-  Box,
-  Typography,
-  Paper,
-  Alert,
-  CircularProgress,
+  Card,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Button,
-  IconButton,
-  TextField,
-  InputAdornment,
-  TablePagination,
-} from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Search as SearchIcon, Add as AddIcon } from '@mui/icons-material';
+  Space,
+  Input,
+  Modal,
+  Alert,
+  Empty
+} from 'antd';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import type { TableProps } from 'antd';
+
+const { Search } = Input;
 
 const ArticleListPage = () => {
   const [articles, setArticles] = useState<IRspFindArticle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 用于提交给 API 的搜索词
+  const [submittedSearch, setSubmittedSearch] = useState('');
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // antd 分页状态，从 1 开始
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalArticles, setTotalArticles] = useState(0);
 
   const navigate = useNavigate();
 
-  const fetchArticles = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // 修正请求参数字段以匹配 IReqFindArticle
-      const requestData: IReqFindArticle = {
-        title: searchTerm,
-        pagenum: page + 1,
-        pagesize: rowsPerPage,
-      };
-      
-      const { data: result } = await articlesApi.getArticles(requestData);
-
-      // 正确处理 IApiResponse<IRspArticleList> 结构
-      if (result && result.status === 200) {
-        setArticles(result.data.articles || []);
-        setTotalArticles(result.data.total || 0);
-      } else {
-        setError(result.message || '获取文章列表失败');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || '发生未知网络错误');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 当页码或每页数量变化时重新获取
   useEffect(() => {
-    fetchArticles();
-  }, [page, rowsPerPage]);
+    const fetchArticles = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const requestData: IReqFindArticle = {
+          title: submittedSearch,
+          pagenum: page,
+          pagesize: pageSize,
+        };
+        
+        const { data: result } = await articlesApi.getArticles(requestData);
 
-  const handleSearch = () => {
-    setPage(0); // 搜索时回到第一页
+        if (result && result.status === 200) {
+          setArticles(result.data.articles || []);
+          setTotalArticles(result.data.total || 0);
+        } else {
+          setError(result.message || '获取文章列表失败');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || '发生未知网络错误');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchArticles();
+  }, [page, pageSize, submittedSearch]); // 当这些状态变化时重新获取数据
+
+  const handleSearch = (value: string) => {
+    setPage(1); // 搜索时回到第一页
+    setSubmittedSearch(value);
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('确定要删除这篇文章吗？')) {
-      try {
-        await articlesApi.deleteArticle(id);
-        // 如果当前页只剩一条数据，删除后应该返回上一页
-        if (articles.length === 1 && page > 0) {
-          setPage(page - 1);
-        } else {
-          fetchArticles(); // 重新加载当前页
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || '删除失败');
+    try {
+      await articlesApi.deleteArticle(id);
+      // 如果当前页只剩一条数据且不是第一页，删除后返回上一页
+      if (articles.length === 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        // 否则，重新触发当前页的加载
+        // 通过改变一个状态来强制 useEffect 重新运行
+        setSubmittedSearch(prev => prev); // 这是一个小技巧，也可以用一个专用的 refresh state
       }
+    } catch (err: any) {
+      setError(err.response?.data?.message || '删除失败');
     }
   };
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
+  const showDeleteConfirm = (id: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '你确定要删除这篇文章吗？此操作不可撤销。',
+      okText: '确认',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => handleDelete(id),
+    });
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+  // antd Table 的分页变化处理
+  const handleTableChange: TableProps<IRspFindArticle>['onChange'] = (pagination) => {
+    setPage(pagination.current || 1);
+    setPageSize(pagination.pageSize || 10);
   };
 
-  const renderContent = () => {
-    if (loading) {
-      return <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>;
-    }
-    if (error) {
-      return <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>;
-    }
-    if (articles.length === 0) {
-        return <Typography sx={{ mt: 2, textAlign: 'center' }}>暂无文章数据</Typography>
-    }
-
-    return (
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>标题</TableCell>
-              <TableCell>分类</TableCell>
-              <TableCell>创建时间</TableCell>
-              <TableCell align="right">操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* 修正字段访问：article.id 和 article.name */}
-            {articles.map((article) => (
-              <TableRow key={article.id}>
-                <TableCell>{article.id}</TableCell>
-                <TableCell>{article.title}</TableCell>
-                <TableCell>{article.name || '未分类'}</TableCell>
-                <TableCell>{new Date(article.CreatedAt).toLocaleString()}</TableCell>
-                <TableCell align="right">
-                  <Button size="small" onClick={() => navigate(`/article/${article.id}`)}>详情</Button>
-                  <IconButton size="small" onClick={() => navigate(`/article/edit/${article.id}`)}><EditIcon fontSize="small" /></IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(article.id)}><DeleteIcon fontSize="small" /></IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    );
-  };
+  // 定义 Table 的列
+  const columns: TableProps<IRspFindArticle>['columns'] = [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+    { title: '标题', dataIndex: 'title', key: 'title' },
+    { title: '分类', dataIndex: 'name', key: 'name', render: (name) => name || '未分类' },
+    { 
+      title: '创建时间', 
+      dataIndex: 'CreatedAt', 
+      key: 'CreatedAt',
+      render: (date: string) => new Date(date).toLocaleString()
+    },
+    {
+      title: '操作',
+      key: 'action',
+      align: 'right',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button size="small" onClick={() => navigate(`/article/${record.id}`)}>详情</Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/article/edit/${record.id}`)} />
+          <Button size="small" icon={<DeleteOutlined />} danger onClick={() => showDeleteConfirm(record.id)} />
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          文章管理
-        </Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 2 }}>
-          <TextField
-            label="搜索文章标题"
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={handleSearch}><SearchIcon /></IconButton>
-                </InputAdornment>
-              ),
+    <div style={{ padding: 24 }}>
+      <Card>
+        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Search
+              placeholder="搜索文章标题"
+              onSearch={handleSearch}
+              style={{ width: 300 }}
+              enterButton
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate('/article/create')}
+            >
+              写文章
+            </Button>
+          </div>
+          <Table
+            columns={columns}
+            dataSource={articles}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              current: page,
+              pageSize: pageSize,
+              total: totalArticles,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 条`,
             }}
+            onChange={handleTableChange}
+            locale={{ emptyText: <Empty description="暂无文章数据" /> }}
           />
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/article/create')} // 跳转到新建文章页
-          >
-            写文章
-          </Button>
-        </Box>
-        
-        {renderContent()}
-
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 20]}
-          component="div"
-          count={totalArticles}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="每页行数:"
-        />
-      </Paper>
-    </Box>
+        </Space>
+      </Card>
+    </div>
   );
 };
 

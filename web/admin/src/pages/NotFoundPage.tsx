@@ -1,12 +1,25 @@
+import { Result, Button } from 'antd';
 import { Link } from 'react-router-dom';
 
 const NotFoundPage = () => {
   return (
-    <div style={{ textAlign: 'center', marginTop: '50px' }}>
-      <h1>404 - 页面未找到</h1>
-      <p>您正在寻找的页面不存在。</p>
-      <Link to="/">返回首页</Link>
-    </div>
+    <Result
+      status="404"
+      title="404"
+      subTitle="抱歉，您访问的页面不存在。"
+      extra={
+        <Button type="primary">
+          <Link to="/">返回首页</Link>
+        </Button>
+      }
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    />
   );
 };
 

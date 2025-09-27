@@ -2,26 +2,14 @@ import axios from 'axios';
 import type { AxiosPromise } from 'axios';
 import { message } from 'antd';
 import type {
-  IApiResponse,
-  IReqLogin,
-  IReqRegister,
-  IReqFindUser,
-  IReqAddUser,
-  IReqEditUser,
-  IUser,
-  IReqFindArticle,
-  IReqAddArticle,
-  IReqUpdateArticle,
-  IRspArticleList,
-  IRspFindArticle,
-  IArticle,
-  IRspComment,
+  IApiResponse,  IUser,  IArticle,  IComment,  ICategory,  IProfile,
+  IReqLogin,  IReqRegister,
+  IReqFindUser,  IReqAddUser,  IReqEditUser,
+  IReqFindArticle,  IReqAddArticle,  IReqUpdateArticle,
   IReqAddComment,
-  IComment,
-  ICategory,
-  IReqAddCategory,
-  IProfile,
+  IReqFindCate,  IReqAddCategory,  IReqEditCategory,
   IReqUpdateProfile,
+  IRspArticleList,  IRspComment,
 } from '../utils/types';
 
 const api = axios.create({
@@ -29,6 +17,7 @@ const api = axios.create({
     timeout: 10000,
 });
 
+// Axios 拦截器
 api.interceptors.request.use(
     (config) => {
         const token = sessionStorage.getItem('token');
@@ -49,28 +38,23 @@ api.interceptors.response.use(
         }
 
         const { data } = error.response;
-        const customCode = data.status; // 对应 errmsg 中的 code
-        const errorMessage = data.message; // 对应 errmsg 中的 message
+        const customCode = data.status;
+        const errorMessage = data.message;
 
-        // 根据后端的自定义错误码进行精细化处理
         switch (customCode) {
-            case 1004: // ERROR_TOKEN_NOT_EXIST
-            case 1005: // ERROR_TOKEN_RUNTIEM
-            case 1006: // ERROR_TOKEN_WRONG
-            case 1007: // ERROR_TOKEN_TYPE_WRONG
+            case 1004:
+            case 1005:
+            case 1006:
+            case 1007:
                 message.error(errorMessage || '登录状态已失效，请重新登录');
                 sessionStorage.removeItem('token');
-                // 延迟跳转，给用户看清提示的时间
                 setTimeout(() => {
                     window.location.href = '/login';
                 }, 1500);
                 break;
-
-            // --- 权限不足错误 ---
-            case 1008: // ERROR_USER_NO_RIGHT
+            case 1008:
                 message.error(errorMessage || '对不起，您没有该操作权限');
                 break;
-            
             default:
                 if (errorMessage) {
                     message.error(errorMessage);
@@ -83,86 +67,90 @@ api.interceptors.response.use(
                     }
                 }
         }
-
         return Promise.reject(error);
     }
 );
 
+
+// ===============================================
+// =================== API 定义 ===================
+// ===============================================
 /**
- * 认证和公开路由
+ * 认证与公开路由 (无需 Token)
  */
 export const authApi = {
-    /** 用户登录 */
-    login: (data: IReqLogin): AxiosPromise<IApiResponse<null>> => api.post('/login', data),
-    /** 用户注册 */
-    register: (data: IReqRegister): AxiosPromise<IApiResponse<null>> => api.post('/register', data),
-    /** 邮件激活账户 (注意: 后端接收的查询参数是 'status'，代码中已做映射) */
-    activateEmail: (params: { code: string }): AxiosPromise<IApiResponse<null>> => api.get('/active', { params: { status: params.code } }),
-    /** 发送验证码邮件 */
-    sendVerificationEmail: (params: { email: string }): AxiosPromise<IApiResponse<null>> => api.get('/sendmail', { params }),
-    /** 使用邮箱验证码登录 (注意: 后端接收的查询参数是 'status'，代码中已做映射) */
-    loginByEmail: (params: { email: string; code: string }): AxiosPromise<IApiResponse<null>> => api.get('/loginbyemail', { params: { email: params.email, status: params.code } }),
+    login: (data: IReqLogin): AxiosPromise<IApiResponse<null>> => api.post('/login', data), // 用户名密码登陆
+    register: (data: IReqRegister): AxiosPromise<IApiResponse<null>> => api.post('/register', data), // 用户注册
+    loginByEmail: (data: { email: string; code: string }): AxiosPromise<IApiResponse<null>> => api.post('/login/email', data), // 邮箱验证码登陆
+    sendVerificationEmail: (data: { email: string }): AxiosPromise<IApiResponse<null>> => api.post('/email/code', data), // 发送验证码
+
+    activateEmail: (params: { code: string }): AxiosPromise<IApiResponse<null>> => api.get('/active', { params }), // 邮箱激活链接
 };
 
 /**
- * 用户管理
+ * 用户管理 (需要 Token)
  */
 export const usersApi = {
-    getUsers: (params: IReqFindUser): AxiosPromise<IApiResponse<IUser[]>> => api.post('/users', params),
-    getUserInfo: (id: number): AxiosPromise<IApiResponse<IUser>> => api.get(`/user/${id}`),
-    addUser: (data: IReqAddUser): AxiosPromise<IApiResponse<IUser>> => api.post('/user/add', data),
-    updateUser: (data: IReqEditUser): AxiosPromise<IApiResponse<IUser>> => api.post('/user/update', data),
-    deleteUser: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/user/${id}`),
+    getUsers: (params: IReqFindUser): AxiosPromise<IApiResponse<IUser[]>> => api.get('/users', { params }), // 获取用户列表
+    getUserInfo: (id: number): AxiosPromise<IApiResponse<IUser>> => api.get(`/users/${id}`), // 获取指定用户详情
+    addUser: (data: IReqAddUser): AxiosPromise<IApiResponse<IUser>> => api.post('/users/add', data), // 添加用户
+    updateUser: (id: number, data: IReqEditUser): AxiosPromise<IApiResponse<IUser>> => api.put(`/users/${id}`, data), // 编辑用户
+    deleteUser: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/users/${id}`), // 删除用户
 };
 
 /**
  * 分类管理
  */
 export const categoryApi = {
-    getCategories: (): AxiosPromise<IApiResponse<ICategory[]>> => api.get('/category'),
-    findCategoryById: (id: number): AxiosPromise<IApiResponse<ICategory>> => api.get(`/category/${id}`),
-    addCategory: (data: IReqAddCategory): AxiosPromise<IApiResponse<ICategory>> => api.post('/category/add', data),
-    editCategory: (id: number, data: { name: string }): AxiosPromise<IApiResponse<ICategory>> => api.post(`/category/${id}`, data),
-    deleteCategory: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/category/${id}`),
+    // --- 公共接口 ---
+    getCategories: (params: IReqFindCate): AxiosPromise<IApiResponse<ICategory[]>> => api.get('/categories', { params }), // 获取分类列表
+    findCategoryById: (id: number): AxiosPromise<IApiResponse<ICategory>> => api.get(`/categories/${id}`), // 获取指定分类详情
+    getArticlesByCategory: (id: number): AxiosPromise<IApiResponse<IRspArticleList>> => api.get(`/categories/${id}/articles`), // 获取某分类下所有文章
+
+    // --- 权限接口 ---
+    addCategory: (data: IReqAddCategory): AxiosPromise<IApiResponse<ICategory>> => api.post('/categories', data), // 添加分类
+    editCategory: (id: number, data: IReqEditCategory): AxiosPromise<IApiResponse<ICategory>> => api.put(`/categories/${id}`, data), // 编辑分类
+    deleteCategory: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/categories/${id}`), // 删除分类
 };
 
 /**
  * 文章管理
  */
 export const articlesApi = {
-    getArticles: (params: IReqFindArticle): AxiosPromise<IApiResponse<IRspArticleList>> => api.post('/articles', params),
-    getArticleDetail: (id: number): AxiosPromise<IApiResponse<IRspFindArticle>> => api.get(`/article/cate/${id}`),
-    addArticle: (data: IReqAddArticle): AxiosPromise<IApiResponse<IArticle>> => api.post('/article/add', data),
-    updateArticle: (id: number, data: IReqUpdateArticle): AxiosPromise<IApiResponse<IArticle>> => api.put(`/article/${id}`, data),
-    deleteArticle: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/article/${id}`),
+    // --- 公共接口 ---
+    getArticles: (params: IReqFindArticle): AxiosPromise<IApiResponse<IRspArticleList>> => api.get('/articles', { params }), // 获取文章列表
+    getArticleDetail: (id: number): AxiosPromise<IApiResponse<IArticle>> => api.get(`/articles/${id}`), // 获取指定文章详情
+
+    // --- 权限接口 ---
+    addArticle: (data: IReqAddArticle): AxiosPromise<IApiResponse<IArticle>> => api.post('/articles', data), // 添加文章
+    updateArticle: (id: number, data: IReqUpdateArticle): AxiosPromise<IApiResponse<IArticle>> => api.put(`/articles/${id}`, data), // 编辑文章
+    deleteArticle: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/articles/${id}`), // 删除文章
 };
 
 /**
  * 评论管理
  */
 export const commentsApi = {
-    getComments: (articleId: number): AxiosPromise<IApiResponse<IRspComment[]>> => api.get(`/comment/${articleId}`),
-    addComment: (data: IReqAddComment): AxiosPromise<IApiResponse<IComment>> => api.post('/comment', data),
-    deleteComment: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/comment/${id}`),
+    // --- 公共接口 ---
+    getComments: (articleId: number): AxiosPromise<IApiResponse<IRspComment[]>> => api.get(`/articles/${articleId}/comments`), // 查看指定文章下的评论
+
+    // --- 权限接口 ---
+    addComment: (data: IReqAddComment): AxiosPromise<IApiResponse<IComment>> => api.post('/comments', data), // 添加评论
+    deleteComment: (id: number): AxiosPromise<IApiResponse<null>> => api.delete(`/comments/${id}`), // 删除评论
 };
 
-
 /**
- * 个人资料和文件上传
+ * 个人资料和文件上传 (需要 Token)
  */
 export const profileApi = {
-    getProfile: (): AxiosPromise<IApiResponse<IProfile>> => api.get('/profile'),
-    updateProfile: (data: IReqUpdateProfile): AxiosPromise<IApiResponse<IProfile>> => api.put('/profile', data),
-    
-    // [新增] uploadFile 方法
+    getProfile: (): AxiosPromise<IApiResponse<IProfile>> => api.get('/profile'), // 获取个人资料
+    updateProfile: (data: IReqUpdateProfile): AxiosPromise<IApiResponse<IProfile>> => api.put('/profile', data), // 编辑个人资料
+    // 上传文件
     uploadFile: (file: File): AxiosPromise<IApiResponse<{ url: string }>> => {
         const formData = new FormData();
-        // 关键：'file' 必须与后端 c.Request.FormFile("file") 中的 key 一致
         formData.append('file', file);
         return api.post('/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
     },
 };
-
-export default api;

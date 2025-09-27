@@ -14,7 +14,7 @@ import (
 
 // var ctx = context.Background()
 
-// RegisterUser 在一个事务中处理完整的用户注册流程。
+// RegisterUser 在一个事务中处理完整的用户注册流程
 func RegisterUser(data *User) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 1. 检查用户名或邮箱是否已存在
@@ -53,7 +53,7 @@ func RegisterUser(data *User) error {
 	})
 }
 
-// ActivateUserByCode 根据激活码查找用户并更新其状态。
+// ActivateUserByCode 根据激活码查找用户并更新其状态
 func ActivateUserByCode(code string) error {
 	var user User
 	err := db.Where("code = ? AND status = ?", code, "N").First(&user).Error
@@ -69,7 +69,7 @@ func ActivateUserByCode(code string) error {
 	return db.Model(&user).Updates(updates).Error
 }
 
-// SendVerificationCode 生成验证码，存入 Redis 并通过邮件发送。
+// SendVerificationCode 生成验证码，存入 Redis 并通过邮件发送
 func SendVerificationCode(email string) error {
 	code := utils.CreateVcode() // e.g., "123456"
 	emailBody := fmt.Sprintf("<h2>GoBlog 登录</h2><p>您的验证码是: <b style='color:blue;'>%s</b></p><p>此验证码 5 分钟内有效。</p>", code)
@@ -83,7 +83,7 @@ func SendVerificationCode(email string) error {
 	return SendEmail(email, "您的 GoBlog 验证码", emailBody)
 }
 
-// CheckLoginByEmail 验证验证码并获取用户信息。
+// CheckLoginByEmail 验证验证码并获取用户信息
 func CheckLoginByEmail(email, userCode string) (*User, error) {
 	serverCode, err := Redis.Get(ctx, email).Result()
 	if err != nil {

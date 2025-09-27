@@ -16,6 +16,7 @@ import (
 const SessionExpireTime = 3600 * 24
 
 // Register 处理用户注册
+// @Router /api/v1/register [post]
 func Register(c *gin.Context) {
 	var req dto.ReqRegister
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -50,6 +51,7 @@ func Register(c *gin.Context) {
 }
 
 // ActiveEmail 处理从邮件链接过来的账户激活请求
+// @Router /api/v1/active [get]
 func ActiveEmail(c *gin.Context) {
 	var req dto.ReqActiveEmail
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -71,6 +73,7 @@ func ActiveEmail(c *gin.Context) {
 }
 
 // Login 处理用户名密码登录
+// @Router /api/v1/login [post]
 func Login(c *gin.Context) {
 	var req dto.ReqLogin
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -91,18 +94,6 @@ func Login(c *gin.Context) {
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
-
-	// // --- 新增 Session 逻辑 ---
-	// // 1. 在服务器端为用户创建会话。
-	// //    我们假设 model.CreateSession 会生成一个唯一的 sessionID 并存入 Redis 或数据库。
-	// sessionID, err := model.CreateSession(user.ID)
-	// if err != nil {
-	// 	appErr := errmsg.ErrInternalServer.WithMsg("创建会话失败: %v", err)
-	// 	c.JSON(appErr.HTTPStatus, appErr)
-	// 	return
-	// }
-	// // 2. 将 sessionID 通过 Cookie 发送给客户端。
-	// model.SetSession(c, sessionID, SessionExpireTime)
 
 	token, appErr := middleware.SetToken(user.Username)
 	if appErr != nil {
@@ -127,6 +118,7 @@ func Login(c *gin.Context) {
 }
 
 // SendEmailForCode 发送用于邮箱登录的验证码
+// @Router /api/v1/email/code [post]
 func SendEmailForCode(c *gin.Context) {
 	var req dto.ReqSendEmailForCode
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -154,6 +146,7 @@ func SendEmailForCode(c *gin.Context) {
 }
 
 // LoginByEmail 处理邮箱和验证码登录
+// @Router /api/v1/login/email [post]
 func LoginByEmail(c *gin.Context) {
 	var req dto.ReqLoginByEmail
 	if err := c.ShouldBindJSON(&req); err != nil {

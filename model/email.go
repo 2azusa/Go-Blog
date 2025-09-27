@@ -8,7 +8,6 @@ import (
 	"github.com/go-gomail/gomail"
 )
 
-// SendEmail now returns a standard error.
 func SendEmail(to string, title string, body string) error {
 	m := gomail.NewMessage()
 
@@ -21,11 +20,10 @@ func SendEmail(to string, title string, body string) error {
 	d := gomail.NewDialer(utils.ServerHost, serverPort, utils.FromEmail, utils.FromPassword)
 
 	if err := d.DialAndSend(m); err != nil {
-		// If sending fails, return a predefined application error.
 		return errmsg.ErrEmailSendFailed.WithMsg("Failed to send email to %s: %v", to, err)
 	}
 
-	return nil // Success
+	return nil
 }
 
 // // Mailer 是邮件拨号器的接口

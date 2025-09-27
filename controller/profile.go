@@ -10,6 +10,7 @@ import (
 )
 
 // GetProfile 获取当前登录用户的个人信息
+// @Router /api/v1/profile [get]
 func GetProfile(c *gin.Context) {
 	// 1. 从 JWT 中间件获取用户 ID
 	userID, _ := c.Get("userID")
@@ -42,6 +43,7 @@ func GetProfile(c *gin.Context) {
 }
 
 // UpdateProfile 更新当前登录用户的个人信息
+// @Router /api/v1/register [put]
 func UpdateProfile(c *gin.Context) {
 	// 1. 从 JWT 中获取用户 ID
 	userID, _ := c.Get("userID")

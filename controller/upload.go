@@ -10,6 +10,7 @@ import (
 )
 
 // Upload 处理文件上传请求
+// @Router /api/v1/upload [post]
 func Upload(c *gin.Context) {
 	// 1. 从表单中获取文件
 	file, fileHeader, err := c.Request.FormFile("file")

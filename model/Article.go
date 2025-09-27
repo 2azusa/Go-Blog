@@ -66,7 +66,6 @@ func GetCommentsByArticleId(id int) ([]Comment, error) {
 		return nil, err
 	}
 
-	// 注意：按照业务逻辑，文章没有评论不应该算作一个错误
 	if len(comments) == 0 {
 		return nil, errmsg.ErrArticleNoComment // 200
 	}
@@ -153,7 +152,7 @@ func EditArticle(id int, data *Article) error {
 		return err
 	}
 
-	updates := map[string]interface{}{
+	updates := map[string]any{
 		"title":   data.Title,
 		"cid":     data.Cid,
 		"desc":    data.Desc,

@@ -10,7 +10,7 @@ import (
 type Article struct {
 	gorm.Model
 	Title    string   `gorm:"type:varchar(100);not null" json:"title"`
-	Cid      int      `gorm:"type:int;notnull" json:"cid"`
+	Cid      uint     `gorm:"notnull" json:"cid"`
 	Desc     string   `gorm:"type:varchar(200)" json:"desc"`
 	Content  string   `gorm:"type:longtext;not null" json:"content"`
 	Img      string   `gorm:"type:varchar(200)" json:"img"`
@@ -22,8 +22,8 @@ type Comment struct {
 	gorm.Model
 	Commentator string `gorm:"type:varchar(20);not null" json:"commentator"`
 	Content     string `gorm:"type:longtext;not null" json:"content"`
-	ArticleID   int    `gorm:"type:int;not null" json:"article_id"`
-	ParentID    int    `gorm:"type:int" json:"parent_id"`
+	ArticleID   uint   `gorm:"not null" json:"article_id"`
+	ParentID    uint
 }
 
 // CreateArticle 添加文章
@@ -35,7 +35,7 @@ func CreateArticle(data *Article) error {
 }
 
 // CreateComment 添加评论
-func CreateComment(articleId int, data *Comment) error {
+func CreateComment(articleId uint, data *Comment) error {
 	var article Article
 	if err := db.First(&article, articleId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -51,7 +51,7 @@ func CreateComment(articleId int, data *Comment) error {
 }
 
 // GetCommentsByArticleId 查询文章下的所有评论
-func GetCommentsByArticleId(id int) ([]Comment, error) {
+func GetCommentsByArticleId(id uint) ([]Comment, error) {
 	var article Article
 	if err := db.First(&article, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -74,7 +74,7 @@ func GetCommentsByArticleId(id int) ([]Comment, error) {
 }
 
 // DeleteComment 删除评论
-func DeleteComment(id int) error {
+func DeleteComment(id uint) error {
 	if err := db.Where("id = ?", id).Delete(&Comment{}).Error; err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func GetArticles(title string, pageSize int, pageNum int) ([]Article, int, error
 }
 
 // GetCateArticle 查询分类下的所有文章
-func GetCateArticle(id int, pageSize int, pageNum int) ([]Article, int, error) {
+func GetCateArticle(id uint, pageSize int, pageNum int) ([]Article, int64, error) {
 	var cate Category
 	if err := db.First(&cate, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -126,11 +126,11 @@ func GetCateArticle(id int, pageSize int, pageNum int) ([]Article, int, error) {
 		return nil, 0, err
 	}
 
-	return cateArticleList, int(total), nil
+	return cateArticleList, total, nil
 }
 
 // GetArticleInfo 查询单个文章详细信息
-func GetArticleInfo(id int) (*Article, error) {
+func GetArticleInfo(id uint) (*Article, error) {
 	var article Article
 	err := db.Preload("Category").Preload("Comments").First(&article, id).Error
 	if err != nil {
@@ -143,7 +143,7 @@ func GetArticleInfo(id int) (*Article, error) {
 }
 
 // EditArticle 编辑文章信息
-func EditArticle(id int, data *Article) error {
+func EditArticle(id uint, data *Article) error {
 	var article Article
 	if err := db.First(&article, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -166,7 +166,7 @@ func EditArticle(id int, data *Article) error {
 }
 
 // DeleteArticle 删除文章 (使用事务)
-func DeleteArticle(id int) error {
+func DeleteArticle(id uint) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		var article Article
 		if err := tx.First(&article, id).Error; err != nil {

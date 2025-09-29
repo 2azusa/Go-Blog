@@ -36,13 +36,13 @@ func GetProfileByUserID(userID uint) (*Profile, error) {
 // UpdateProfileByUserID 根据用户ID更新个人信息
 func UpdateProfileByUserID(userID uint, req *dto.ReqUpdateProfile) error {
 	// 使用 map 来更新，这是一种常见的安全做法
-	updates := map[string]interface{}{
-		"name":    req.Name,
-		"desc":    req.Desc,
-		"we_chat": req.WeChat, // 注意数据库蛇形命名与 struct 字段的映射
-		"weibo":   req.Weibo,
-		"img":     req.Img,
-		"avatar":  req.Avatar,
+	updates := map[string]any{
+		"name":   req.Name,
+		"desc":   req.Desc,
+		"wechat": req.WeChat, // 注意数据库蛇形命名与 struct 字段的映射
+		"weibo":  req.Weibo,
+		"img":    req.Img,
+		"avatar": req.Avatar,
 	}
 
 	result := db.Model(&Profile{}).Where("id = ?", userID).Updates(updates)

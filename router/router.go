@@ -49,7 +49,7 @@ func InitRouter() {
 		apiV1.GET("articles/:id", controller.GetArticleInfo) // 获取单篇文章详情 | 参数来源: URL 路径参数
 
 		// 评论模块
-		// apiV1.GET("articles/:id/comments", controller.GetCommetns) // 获取某文章下的所有评论 | 参数来源: URL 路径参数
+		apiV1.GET("articles/:id/comments", controller.GetCommentsByArticleId) // 获取某文章下的所有评论 | 参数来源: URL 路径参数
 	}
 
 	// --- 权限接口 (需要 JWT Token 验证) ---

@@ -65,8 +65,8 @@ func AddCategory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  errmsg.CreateCategorySuccess.Status,
-		"data":    newCategory,
+		"status": errmsg.CreateCategorySuccess.Status,
+		// "data":    newCategory,
 		"message": errmsg.CreateCategorySuccess.Message,
 	})
 }
@@ -111,7 +111,6 @@ func DeleteCategory(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 0)
 	if err != nil {
-		// --- 已优化：使用预定义变量 ---
 		appErr := errmsg.ErrInvalidCategoryID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
@@ -132,8 +131,7 @@ func DeleteCategory(c *gin.Context) {
 // FindCategoryById 通过id查找分类
 // @Router /api/v1/categories/{id} [get]
 func FindCategoryById(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 0)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidCategoryID
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -157,7 +155,7 @@ func FindCategoryById(c *gin.Context) {
 // GetCateArticle 根据分类查询所有文章
 // @Router /api/v1/categories/{id}/articles [get]
 func GetCateArticle(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidCategoryID
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -178,7 +176,7 @@ func GetCateArticle(c *gin.Context) {
 		req.PageNum = 1
 	}
 
-	articles, total, err := model.GetCateArticle(id, req.PageSize, req.PageNum)
+	articles, total, err := model.GetCateArticle(uint(id), req.PageSize, req.PageNum)
 	if err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)

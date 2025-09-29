@@ -1,5 +1,3 @@
-// 文件路径: controller/auth.go
-
 package controller
 
 import (
@@ -72,7 +70,7 @@ func ActiveEmail(c *gin.Context) {
 	})
 }
 
-// Login 处理用户名密码登录
+// Login 处理用户名密码登录 (混合模式: 同时支持 Session 和 JWT)
 // @Router /api/v1/login [post]
 func Login(c *gin.Context) {
 	var req dto.ReqLogin
@@ -82,12 +80,15 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// 错误类型 1: 数据格式错误 (由 validator 检查)
 	if err := validator.Validate(&req); err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
+	// 1. 验证用户名和密码
+	// 错误类型 2: 业务逻辑/数据库错误 (validator 完全无能为力)
 	user, err := model.CheckLogin(req.Username, req.Password)
 	if err != nil {
 		appErr := errmsg.FromError(err)
@@ -95,22 +96,42 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// --- 凭证颁发开始 ---
+
+	// 2. 为 Web 浏览器创建 Session 并设置 Cookie
+	// 错误类型 3: 内部系统错误 (validator 同样无能为力)
+	sessionID, err := model.CreateSession(user.ID)
+	if err != nil {
+		// 在生产环境中，这里应该记录严重错误日志
+		appErr := errmsg.FromError(errmsg.ErrCreateSessionError)
+		c.JSON(appErr.HTTPStatus, appErr)
+		return
+	}
+	model.SetSessionCookie(c, sessionID)
+
+	// 3. 为移动 App / API 客户端生成 JWT
 	token, appErr := middleware.SetToken(user.Username)
 	if appErr != nil {
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
+	// --- 凭证颁发结束 ---
+
+	// 4. 返回包含两种凭证信息的响应
 	c.JSON(http.StatusOK, gin.H{
 		"status": errmsg.SUCCESS.Status,
+		// 响应体中同时包含用户信息和 JWT Token
+		// 浏览器客户端主要使用 Cookie，会忽略 token
+		// App 客户端主要使用 token，会忽略 Cookie
 		"data": dto.RspLogin{
-			User: dto.RspUser{
-				ID:        user.ID,
-				Username:  user.Username,
-				Email:     user.Email,
-				Role:      user.Role,
-				CreatedAt: user.CreatedAt,
-			},
+			// User: dto.RspUser{
+			// 	ID:        user.ID,
+			// 	Username:  user.Username,
+			// 	Email:     user.Email,
+			// 	Role:      user.Role,
+			// 	CreatedAt: user.CreatedAt,
+			// },
 			Token: token,
 		},
 		"message": errmsg.SUCCESS.Message,
@@ -177,13 +198,13 @@ func LoginByEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": errmsg.SUCCESS.Status,
 		"data": dto.RspLogin{
-			User: dto.RspUser{
-				ID:        user.ID,
-				Username:  user.Username,
-				Email:     user.Email,
-				Role:      user.Role,
-				CreatedAt: user.CreatedAt,
-			},
+			// User: dto.RspUser{
+			// 	ID:        user.ID,
+			// 	Username:  user.Username,
+			// 	Email:     user.Email,
+			// 	Role:      user.Role,
+			// 	CreatedAt: user.CreatedAt,
+			// },
 			Token: token,
 		},
 		"message": errmsg.SUCCESS.Message,

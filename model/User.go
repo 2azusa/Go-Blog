@@ -16,11 +16,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	SaltBytes = 16 // 盐的长度
-	HashBytes = 32 // 哈希的长度
-)
-
 type User struct {
 	gorm.Model
 	Username string `gorm:"type:varchar(20);not null;unique" json:"username"`
@@ -30,6 +25,11 @@ type User struct {
 	Status   string `gorm:"type:varchar(12);default:'N'" json:"-"`
 	Code     string `gorm:"type:varchar(80)" json:"-"`
 }
+
+const (
+	SaltBytes = 16 // 盐的长度
+	HashBytes = 32 // 哈希的长度
+)
 
 // BeforeSave 是一个 GORM 钩子，在保存 User 记录前自动执行
 func (u *User) BeforeSave(tx *gorm.DB) (err error) {
@@ -123,7 +123,7 @@ func CheckUserExists(name string) (bool, error) {
 }
 
 // GetUserInfo 查询单个用户的详细信息
-func GetUserInfo(id int) (*User, error) {
+func GetUserInfo(id uint) (*User, error) {
 	var user User
 	err := db.First(&user, id).Error
 	if err != nil {
@@ -136,7 +136,7 @@ func GetUserInfo(id int) (*User, error) {
 }
 
 // GetUsers 分页查询用户列表
-func GetUsers(query string, pageSize int, pageNum int) ([]User, int, error) {
+func GetUsers(query string, pageSize int, pageNum int) ([]User, int64, error) {
 	var users []User
 	var total int64
 	DB := db.Model(&User{})
@@ -150,11 +150,11 @@ func GetUsers(query string, pageSize int, pageNum int) ([]User, int, error) {
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, 0, err
 	}
-	return users, int(total), nil
+	return users, total, nil
 }
 
 // UpdateUserAndProfile 在一个事务中，统一更新用户和其关联的 Profile 信息
-func UpdateUserAndProfile(id int, req *dto.ReqEditUser) error {
+func UpdateUserAndProfile(id uint, req *dto.ReqEditUser) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		var currentUser User
 		if err := tx.First(&currentUser, id).Error; err != nil {
@@ -189,7 +189,7 @@ func UpdateUserAndProfile(id int, req *dto.ReqEditUser) error {
 }
 
 // DeleteUser 在一个事务中，删除用户及其关联的 Profile 和中间表记录
-func DeleteUser(id int) error {
+func DeleteUser(id uint) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 检查用户是否存在
 		if err := tx.First(&User{}, id).Error; err != nil {

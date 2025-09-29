@@ -1,5 +1,3 @@
-// 文件路径: controller/article.go
-
 package controller
 
 import (
@@ -37,8 +35,8 @@ func AddArticle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  errmsg.CreateArticleSuccess.Status,
-		"data":    newArticle,
+		"status": errmsg.CreateArticleSuccess.Status,
+		// "data":    newArticle,
 		"message": errmsg.CreateArticleSuccess.Message,
 	})
 }
@@ -46,14 +44,14 @@ func AddArticle(c *gin.Context) {
 // GetArticleInfo 获取单个文章详细信息
 // @Router /api/v1/articles/{id} [get]
 func GetArticleInfo(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidArticleID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	article, err := model.GetArticleInfo(id)
+	article, err := model.GetArticleInfo(uint(id))
 	if err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -102,7 +100,7 @@ func GetArticle(c *gin.Context) {
 // EditArticle 编辑文章
 // @Router /api/v1/articles/{id} [put]
 func EditArticle(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidArticleID
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -124,7 +122,7 @@ func EditArticle(c *gin.Context) {
 		Img:     req.Img,
 	}
 
-	if err := model.EditArticle(id, articleToUpdate); err != nil {
+	if err := model.EditArticle(uint(id), articleToUpdate); err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
@@ -139,14 +137,14 @@ func EditArticle(c *gin.Context) {
 // DeleteArticle 删除文章
 // @Router /api/v1/articles/{id} [delete]
 func DeleteArticle(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidArticleID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	if err := model.DeleteArticle(id); err != nil {
+	if err := model.DeleteArticle(uint(id)); err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
@@ -161,14 +159,14 @@ func DeleteArticle(c *gin.Context) {
 // GetCommentsByArticleId 获取文章下的所有评论
 // @Router /api/v1/articles/{id}/comments [get]
 func GetCommentsByArticleId(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidArticleID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	comments, err := model.GetCommentsByArticleId(id)
+	comments, err := model.GetCommentsByArticleId(uint(id))
 	if err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -185,12 +183,13 @@ func GetCommentsByArticleId(c *gin.Context) {
 // AddComment 添加评论
 // @Router /api/v1/articles/{id}/comments [post]
 func AddComment(c *gin.Context) {
-	articleId, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint((c.Param("id")), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidArticleID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
+	articleId := uint(id)
 
 	var req dto.ReqAddComment
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -210,8 +209,8 @@ func AddComment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":  errmsg.AddCommentSuccess.Status,
-		"data":    newComment,
+		"status": errmsg.AddCommentSuccess.Status,
+		// "data":    newComment,
 		"message": errmsg.AddCommentSuccess.Message,
 	})
 }
@@ -219,14 +218,14 @@ func AddComment(c *gin.Context) {
 // DeleteComment 删除评论
 // @Router /api/v1/comments/{id} [delete]
 func DeleteComment(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidCommentID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	if err := model.DeleteComment(id); err != nil {
+	if err := model.DeleteComment(uint(id)); err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
 		return

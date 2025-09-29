@@ -15,14 +15,6 @@ import NotFoundPage from '../pages/NotFoundPage.tsx';
 import UserDetailPage from '../pages/UserDetailPage.tsx';
 import RegisterPage from '../pages/RegisterPage.tsx';
 
-// index        IndexPage
-// addart       AddArtPage
-// addart/:id   AddArtPage
-// artlist      ArtListPage
-// catelist     CateListPgae
-// userlist     UserListPage
-// profile      ProfilePage
-
 export const router = createBrowserRouter([
   {
     path: '/login',

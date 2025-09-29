@@ -23,21 +23,21 @@ func GetProfile(c *gin.Context) {
 		return
 	}
 
-	// 4. 准备响应 DTO
-	rsp := dto.RspProfile{
-		RspUser: dto.RspUser{}, // 实际项目中应填充用户信息
-		Name:    profile.Name,
-		Desc:    profile.Desc,
-		WeChat:  profile.WeChat,
-		Weibo:   profile.Weibo,
-		Img:     profile.Img,
-		Avatar:  profile.Avatar,
-	}
+	// // 4. 准备响应 DTO
+	// rspProfile := dto.RspProfile{
+	// 	RspUser: dto.RspUser{},
+	// 	Name:    profile.Name,
+	// 	Desc:    profile.Desc,
+	// 	WeChat:  profile.WeChat,
+	// 	Weibo:   profile.Weibo,
+	// 	Img:     profile.Img,
+	// 	Avatar:  profile.Avatar,
+	// }
 
 	// 5. 成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"status":  errmsg.SUCCESS.Status,
-		"data":    rsp,
+		"data":    profile,
 		"message": errmsg.SUCCESS.Message,
 	})
 }

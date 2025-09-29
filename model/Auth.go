@@ -12,8 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// var ctx = context.Background()
-
 // RegisterUser 在一个事务中处理完整的用户注册流程
 func RegisterUser(data *User) error {
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -65,7 +63,7 @@ func ActivateUserByCode(code string) error {
 	}
 
 	// 激活用户：更新状态并清除激活码
-	updates := map[string]interface{}{"status": "A", "code": ""}
+	updates := map[string]any{"status": "A", "code": ""}
 	return db.Model(&user).Updates(updates).Error
 }
 

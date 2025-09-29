@@ -45,13 +45,13 @@ func AddUser(c *gin.Context) {
 	// 4. 成功响应 - 已优化
 	c.JSON(http.StatusOK, gin.H{
 		"status": errmsg.AddUserSuccess.Status,
-		"data": dto.RspUser{
-			ID:        newUser.ID,
-			CreatedAt: newUser.CreatedAt,
-			Username:  newUser.Username,
-			Email:     newUser.Email,
-			Role:      newUser.Role,
-		},
+		// "data": dto.RspUser{
+		// 	ID:        newUser.ID,
+		// 	CreatedAt: newUser.CreatedAt,
+		// 	Username:  newUser.Username,
+		// 	Email:     newUser.Email,
+		// 	Role:      newUser.Role,
+		// },
 		"message": errmsg.AddUserSuccess.Message,
 	})
 }
@@ -102,14 +102,14 @@ func GetUser(c *gin.Context) {
 // GetUserInfo 获取单个用户详细信息
 // @Router /api/v1/users/{id} [get]
 func GetUserInfo(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidUserID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	user, err := model.GetUserInfo(id)
+	user, err := model.GetUserInfo(uint(id))
 	if err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -132,7 +132,7 @@ func GetUserInfo(c *gin.Context) {
 // EditUser (管理员)编辑用户信息
 // @Router /api/v1/users/{id} [put]
 func EditUser(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidUserID
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -146,7 +146,7 @@ func EditUser(c *gin.Context) {
 		return
 	}
 
-	err = model.UpdateUserAndProfile(id, &req)
+	err = model.UpdateUserAndProfile(uint(id), &req)
 	if err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -162,14 +162,14 @@ func EditUser(c *gin.Context) {
 // DeleteUser (管理员)删除用户
 // @Router /api/v1/users/{id} [delete]
 func DeleteUser(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
 	if err != nil {
 		appErr := errmsg.ErrInvalidUserID
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	err = model.DeleteUser(id)
+	err = model.DeleteUser(uint(id))
 	if err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { categoryApi } from '../services/api';
+import { categoryApi } from '../api/api';
 import {
   Card,
   List,
@@ -15,7 +15,7 @@ import {
   Input
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import type { ICategory, IReqFindCate } from '../utils/types';
+import type { ICategory, IReqFindCate } from '../types/types';
 
 // --- 步骤 1: 迁移 CategoryAddModal 组件 ---
 interface ICategoryAddModalProps {

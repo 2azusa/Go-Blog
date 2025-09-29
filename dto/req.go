@@ -5,15 +5,15 @@ type PageReq struct {
 	PageSize int `form:"pagesize" json:"pagesize" binding:"omitempty,gte=1,lte=100"`
 }
 
+type ReqLogin struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 type ReqRegister struct {
 	Username string `json:"username" binding:"required,min=4,max=20"`
 	Password string `json:"password" binding:"required,min=6,max=20"`
 	Email    string `json:"email"    binding:"required,email"`
-}
-
-type ReqLogin struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
 }
 
 type ReqLoginByEmail struct {

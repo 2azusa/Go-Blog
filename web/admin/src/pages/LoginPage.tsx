@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { authApi } from '../services/api';
+import { authApi } from '../api/api';
 import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 
-import type { IReqLogin } from '../utils/types';
+import type { IReqLogin } from '../types/types';
 
 // The form data interface remains the same
 interface IFormData {

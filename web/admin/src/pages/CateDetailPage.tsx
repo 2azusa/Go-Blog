@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { categoryApi } from '../services/api';
+import { categoryApi } from '../api/api';
 import {
   Card,
   Spin,
@@ -20,7 +20,7 @@ import {
   Empty
 } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { ICategory, IRspFindArticle } from '../utils/types';
+import type { ICategory, IRspFindArticle } from '../types/types';
 
 const { Title } = Typography;
 

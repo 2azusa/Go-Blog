@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { usersApi } from '../services/api';
+import { usersApi } from '../api/api';
 import {
   Card,
   List,
@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
-import type { IUser, IReqFindUser, IReqAddUser } from '../utils/types';
+import type { IUser, IReqFindUser, IReqAddUser } from '../types/types';
 import UserAddModal from '../components/UserAddModal';
 import type { INewUser } from '../components/UserAddModal';
 

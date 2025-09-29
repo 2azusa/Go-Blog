@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { articlesApi } from '../services/api';
-import type { IRspFindArticle, IReqFindArticle } from '../utils/types';
+import { articlesApi } from '../api/api';
+import type { IRspFindArticle, IReqFindArticle } from '../types/types';
 import {
   Card,
   Table,

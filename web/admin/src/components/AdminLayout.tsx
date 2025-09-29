@@ -2,8 +2,8 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Layout } from 'antd';
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState } from '../utils/store';
-import { toggleCollapse } from '../utils/store/slices/uiSlice';
+import type { RootState } from '../store/store';
+import { toggleCollapse } from '../store/slices/uiSlice';
 
 import Navigate from './Navigate/Navigate';
 import Footer from './Footer/Footer';

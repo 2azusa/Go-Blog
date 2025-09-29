@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { usersApi } from '../services/api';
+import { usersApi } from '../api/api';
 import {
   Card,
   Spin,
@@ -17,7 +17,7 @@ import {
 } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
-import type { IUser, IArticle, IReqEditUser } from '../utils/types';
+import type { IUser, IArticle, IReqEditUser } from '../types/types';
 import UserEditModal from '../components/UserEditModal'; 
 const { Title } = Typography;
 

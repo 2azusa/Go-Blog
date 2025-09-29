@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Modal, Form, Input, Select } from 'antd';
 import { useForm } from 'antd/es/form/Form';
 
-import type { IUser } from '../utils/types'; // 假设 IUser 类型定义在这里
+import type { IUser } from '../types/types'; // 假设 IUser 类型定义在这里
 
 const { Option } = Select;
 

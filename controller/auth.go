@@ -70,7 +70,7 @@ func ActiveEmail(c *gin.Context) {
 	})
 }
 
-// Login 处理用户名密码登录 (混合模式: 同时支持 Session 和 JWT)
+// Login 处理用户名密码登录，同时支持 Session 和 JWTks
 // @Router /api/v1/login [post]
 func Login(c *gin.Context) {
 	var req dto.ReqLogin
@@ -120,20 +120,8 @@ func Login(c *gin.Context) {
 
 	// 4. 返回包含两种凭证信息的响应
 	c.JSON(http.StatusOK, gin.H{
-		"status": errmsg.SUCCESS.Status,
-		// 响应体中同时包含用户信息和 JWT Token
-		// 浏览器客户端主要使用 Cookie，会忽略 token
-		// App 客户端主要使用 token，会忽略 Cookie
-		"data": dto.RspLogin{
-			// User: dto.RspUser{
-			// 	ID:        user.ID,
-			// 	Username:  user.Username,
-			// 	Email:     user.Email,
-			// 	Role:      user.Role,
-			// 	CreatedAt: user.CreatedAt,
-			// },
-			Token: token,
-		},
+		"status":  errmsg.SUCCESS.Status,
+		"token":   token,
 		"message": errmsg.SUCCESS.Message,
 	})
 }
@@ -196,17 +184,8 @@ func LoginByEmail(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": errmsg.SUCCESS.Status,
-		"data": dto.RspLogin{
-			// User: dto.RspUser{
-			// 	ID:        user.ID,
-			// 	Username:  user.Username,
-			// 	Email:     user.Email,
-			// 	Role:      user.Role,
-			// 	CreatedAt: user.CreatedAt,
-			// },
-			Token: token,
-		},
+		"status":  errmsg.SUCCESS.Status,
+		"token":   token,
 		"message": errmsg.SUCCESS.Message,
 	})
 }

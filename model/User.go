@@ -18,12 +18,13 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `gorm:"type:varchar(20);not null;unique" json:"username"`
-	Password string `gorm:"type:varchar(128);not null" json:"-"`
-	Email    string `gorm:"type:varchar(32);not null;unique" json:"email"`
-	Role     int    `gorm:"type:int;DEFAULT:2" json:"role"`
-	Status   string `gorm:"type:varchar(12);default:'N'" json:"-"`
-	Code     string `gorm:"type:varchar(80)" json:"-"`
+	Username string  `gorm:"type:varchar(20);not null;unique" json:"username"`
+	Password string  `gorm:"type:varchar(128);not null" json:"-"`
+	Email    string  `gorm:"type:varchar(32);not null;unique" json:"email"`
+	Role     int     `gorm:"type:int;DEFAULT:2" json:"role"`
+	Status   string  `gorm:"type:varchar(12);default:'N'" json:"-"`
+	Code     string  `gorm:"type:varchar(80)" json:"-"`
+	Profile  Profile `gorm:"foreignKey:UserID" json:"profile"`
 }
 
 const (
@@ -97,12 +98,12 @@ func CreateUser(data *User) error {
 		}
 
 		// 3. 创建关联的 Profile 记录
-		profile := Profile{
-			ID:    int(data.ID),
-			Name:  data.Username,
+		data.Profile = Profile{
+			Name:  data.Username, // 默认使用 username 作为 profile 的 name
 			Email: data.Email,
 		}
-		if err := tx.Create(&profile).Error; err != nil {
+
+		if err := tx.Create(&data).Error; err != nil {
 			return err
 		}
 		return nil
@@ -176,12 +177,12 @@ func UpdateUserAndProfile(id uint, req *dto.ReqEditUser) error {
 			}
 		}
 
-		userUpdates := map[string]interface{}{"username": req.Username, "email": req.Email, "role": req.Role}
+		userUpdates := map[string]any{"username": req.Username, "email": req.Email, "role": req.Role}
 		if err := tx.Model(&User{}).Where("id = ?", id).Updates(userUpdates).Error; err != nil {
 			return err
 		}
-		profileUpdates := map[string]interface{}{"name": req.Username, "email": req.Email}
-		if err := tx.Model(&Profile{}).Where("id = ?", id).Updates(profileUpdates).Error; err != nil {
+		profileUpdates := map[string]any{"name": req.Username, "email": req.Email}
+		if err := tx.Model(&Profile{}).Where("user_id = ?", id).Updates(profileUpdates).Error; err != nil {
 			return err
 		}
 		return nil

@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AddUser (管理员)添加新用户
+// AddUser 添加新用户
 // @Router /api/v1/users/add [post]
 func AddUser(c *gin.Context) {
 	var req dto.ReqAddUser
@@ -129,7 +129,7 @@ func GetUserInfo(c *gin.Context) {
 	})
 }
 
-// EditUser (管理员)编辑用户信息
+// EditUser 编辑用户信息
 // @Router /api/v1/users/{id} [put]
 func EditUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 0)
@@ -159,7 +159,7 @@ func EditUser(c *gin.Context) {
 	})
 }
 
-// DeleteUser (管理员)删除用户
+// DeleteUser 删除用户
 // @Router /api/v1/users/{id} [delete]
 func DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 0)

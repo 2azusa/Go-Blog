@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { authApi } from '../services/api';
+import { authApi } from '../api/api';
 import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 
-import type { IReqRegister } from '../utils/types';
+import type { IReqRegister } from '../types/types';
 
 // Form data interface for registration
 interface IFormData {

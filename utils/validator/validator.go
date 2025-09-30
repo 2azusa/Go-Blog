@@ -60,7 +60,7 @@ func initValidator() {
 }
 
 // Validate 函数用于验证数据结构
-func Validate(data interface{}) error {
+func Validate(data any) error {
 	// 使用 sync.Once 来确保全局实例只被初始化一次，这是线程安全的
 	once.Do(initValidator)
 

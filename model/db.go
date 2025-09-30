@@ -40,7 +40,7 @@ func InitDb() {
 	}
 
 	// 迁移 schema
-	err = db.AutoMigrate(&User{}, &Article{}, &Category{}, &Comment{}, &Profile{})
+	err = db.AutoMigrate(&User{}, &Article{}, &Category{}, &Comment{}, &Profile{}, &UserArticle{})
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
@@ -59,7 +59,7 @@ func InitDb() {
 	sqlDB.SetConnMaxLifetime(10 * time.Second)
 }
 
-// InitRedis 初始化 Redis 连接 (适配 go-redis/v9)
+// InitRedis 初始化 Redis 连接
 func InitRedis() {
 	Redis = redis.NewClient(&redis.Options{
 		Addr:     utils.RedisAddr,

@@ -23,17 +23,6 @@ func GetProfile(c *gin.Context) {
 		return
 	}
 
-	// // 4. 准备响应 DTO
-	// rspProfile := dto.RspProfile{
-	// 	RspUser: dto.RspUser{},
-	// 	Name:    profile.Name,
-	// 	Desc:    profile.Desc,
-	// 	WeChat:  profile.WeChat,
-	// 	Weibo:   profile.Weibo,
-	// 	Img:     profile.Img,
-	// 	Avatar:  profile.Avatar,
-	// }
-
 	// 5. 成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"status":  errmsg.SUCCESS.Status,
@@ -51,7 +40,6 @@ func UpdateProfile(c *gin.Context) {
 	// 2. 绑定并校验请求体
 	var req dto.ReqUpdateProfile
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// --- 已优化：使用帮助函数 ---
 		appErr := errmsg.BindError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
 		return

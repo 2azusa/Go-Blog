@@ -65,8 +65,7 @@ func AddCategory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": errmsg.CreateCategorySuccess.Status,
-		// "data":    newCategory,
+		"status":  errmsg.CreateCategorySuccess.Status,
 		"message": errmsg.CreateCategorySuccess.Message,
 	})
 }

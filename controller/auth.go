@@ -33,7 +33,6 @@ func Register(c *gin.Context) {
 		Username: req.Username,
 		Password: req.Password,
 		Email:    req.Email,
-		Role:     2,
 	}
 
 	if err := model.RegisterUser(newUser); err != nil {

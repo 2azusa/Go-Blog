@@ -4,7 +4,7 @@ import { message } from 'antd';
 import type {
   IApiResponse, IRspUser, IRspProfile, IRspArticle, IRspCategory, IRspComment, IRspUpload,
   IReqUser, IReqCategory, IReqArticle, IReqProfile, IReqComment, IReqPagination,
-  IReqLogin, IReqRegister, IReqActiveEmail, IReqLoginByEmail, IReqSendEmailForCode,
+  IReqLogin, IReqRegister,/*IReqActiveEmail,*/ IReqLoginByEmail, IReqSendEmailForCode,
 } from '../types/types';
 
 const api = axios.create({
@@ -70,7 +70,7 @@ export const authApi = {
     register: (data: IReqRegister): AxiosPromise<IApiResponse<null>> => api.post('/register', data), // 用户注册
     loginByEmail: (data: IReqLoginByEmail): AxiosPromise<IApiResponse<null>> => api.post('/login/email', data), // 邮箱验证码登陆
     sendVerificationEmail: (data: IReqSendEmailForCode): AxiosPromise<IApiResponse<null>> => api.post('/email/code', data), // 发送验证码
-    activateEmail: (params: IReqActiveEmail): AxiosPromise<IApiResponse<null>> => api.get('/active', { params }), // 邮箱激活链接
+    // activateEmail: (params: IReqActiveEmail): AxiosPromise<IApiResponse<null>> => api.get('/active', { params }), // 邮箱激活链接
 };
 
 export const usersApi = {

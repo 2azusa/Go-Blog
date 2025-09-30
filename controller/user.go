@@ -15,7 +15,6 @@ import (
 // @Router /api/v1/users/add [post]
 func AddUser(c *gin.Context) {
 	var req dto.ReqAddUser
-	// 1. 绑定并验证请求数据
 	if err := c.ShouldBindJSON(&req); err != nil {
 		appErr := errmsg.BindError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
@@ -27,31 +26,22 @@ func AddUser(c *gin.Context) {
 		return
 	}
 
-	// 2. 准备数据模型
 	newUser := &model.User{
 		Username: req.Username,
 		Password: req.Password,
 		Email:    req.Email,
 		Role:     req.Role,
+		Status:   "Y",
 	}
 
-	// 3. 调用 model 层的业务逻辑
 	if err := model.CreateUser(newUser); err != nil {
 		appErr := errmsg.FromError(err)
 		c.JSON(appErr.HTTPStatus, appErr)
 		return
 	}
 
-	// 4. 成功响应 - 已优化
 	c.JSON(http.StatusOK, gin.H{
-		"status": errmsg.AddUserSuccess.Status,
-		// "data": dto.RspUser{
-		// 	ID:        newUser.ID,
-		// 	CreatedAt: newUser.CreatedAt,
-		// 	Username:  newUser.Username,
-		// 	Email:     newUser.Email,
-		// 	Role:      newUser.Role,
-		// },
+		"status":  errmsg.AddUserSuccess.Status,
 		"message": errmsg.AddUserSuccess.Message,
 	})
 }

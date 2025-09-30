@@ -53,8 +53,8 @@ const Navigate: React.FC<NavigateProps> = ({ collapsed, onToggleCollapse }) => {
                 <Menu.Item key="/articlelist" icon={<SnippetsOutlined />}>
                     <Link to="/articlelist">文章管理</Link>
                 </Menu.Item>
-                <Menu.Item key="/catelist" icon={<BookOutlined />}>
-                    <Link to="/catelist">分类管理</Link>
+                <Menu.Item key="/categorylist" icon={<BookOutlined />}>
+                    <Link to="/categorylist">分类管理</Link>
                 </Menu.Item>
                 <Menu.Item key="/userlist" icon={<UserOutlined />}>
                     <Link to="/userlist">用户列表</Link>

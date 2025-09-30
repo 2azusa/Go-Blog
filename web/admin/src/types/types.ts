@@ -1,5 +1,3 @@
-// ========== 修正并统一后的所有类型定义 ==========
-
 export interface IApiResponse<T> {
   data: T;
   message: string;

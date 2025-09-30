@@ -1,5 +1,3 @@
-// src/pages/CateDetailPage.tsx
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { categoryApi } from '../../api/api';
@@ -15,90 +13,33 @@ import {
   Typography,
   Space,
   Modal,
-  Form,
   Input,
   Empty
 } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { IReqCategory, IReqPagination, IRspArticle, IRspCategory } from '../../types/types';
 
+// 引入新的可复用组件
+import EntityFormModal from '../../components/EntityFormModal'; 
+import CategoryFormFields from '../../components/CategoryFormFields';
+
 const { Title } = Typography;
 const { Search } = Input;
 
-// --- CategoryEditModal 组件 (无改动) ---
-interface ICategoryEditModalProps {
-  open: boolean;
-  // 修正: category 的类型应为 IRspCategory，因为它包含了 id
-  category: IRspCategory | null;
-  onClose: () => void;
-  onSave: (newName: string) => void;
-}
-
-const CategoryEditModal: React.FC<ICategoryEditModalProps> = ({ open, category, onClose, onSave }) => {
-  const [form] = Form.useForm();
-
-  useEffect(() => {
-    if (open && category) {
-      form.setFieldsValue({ name: category.name });
-    }
-  }, [open, category, form]);
-
-  const handleOk = () => {
-    form
-      .validateFields()
-      .then(values => {
-        onSave(values.name);
-        onClose();
-      })
-      .catch(info => {
-        console.log('Validate Failed:', info);
-      });
-  };
-
-  return (
-    <Modal
-      open={open}
-      title="编辑分类"
-      okText="保存"
-      cancelText="取消"
-      onCancel={onClose}
-      onOk={handleOk}
-      destroyOnClose
-    >
-      <Form form={form} layout="vertical" name="categoryEditForm">
-        <Form.Item
-          name="name"
-          label="分类名称"
-          rules={[{ required: true, message: '分类名称不能为空!' }]}
-        >
-          <Input />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-};
-
-
-// --- CateDetailPage 页面 (已更新) ---
-const CateDetailPage = () => {
+const CategoryDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // 修正: category 的类型应为 IRspCategory
   const [category, setCategory] = useState<IRspCategory | null>(null);
   const [articles, setArticles] = useState<IRspArticle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
-  // 新增: 用于文章标题搜索的状态
   const [submittedSearch, setSubmittedSearch] = useState('');
-
-  // 分页状态
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalArticles, setTotalArticles] = useState(0);
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false); // 用于编辑保存时的loading状态
 
   useEffect(() => {
     const fetchCategoryDetails = async () => {
@@ -108,9 +49,8 @@ const CateDetailPage = () => {
       try {
         const categoryId = parseInt(id, 10);
         
-        // 定义包含标题搜索和分页的请求参数
         const requestParams: IReqPagination = {
-          title: submittedSearch, // 新增: 搜索标题
+          title: submittedSearch,
           pagenum: page,
           pagesize: pageSize,
         };
@@ -141,22 +81,16 @@ const CateDetailPage = () => {
       }
     };
     fetchCategoryDetails();
-  }, [id, page, pageSize, submittedSearch]); // 依赖项中加入 submittedSearch
+  }, [id, page, pageSize, submittedSearch]);
 
-  // 修正: 编辑分类的保存逻辑
-  const handleSaveCategory = async (newName: string) => {
+  const handleSaveCategory = async (values: IReqCategory) => {
     if (!category) return;
+    setSaving(true);
     try {
-      // 构造请求数据，符合 IReqCategory 接口
-      const requestData: IReqCategory = { name: newName };
-      const response = await categoryApi.editCategory(category.id, requestData);
-      
-      // API 成功响应但 data 为 null
+      const response = await categoryApi.editCategory(category.id, values);
       if (response.data && response.data.status === 200) {
-        // 手动更新前端状态以立即显示更改
-        setCategory(prevCategory => 
-          prevCategory ? { ...prevCategory, name: newName } : null
-        );
+        setCategory(prev => prev ? { ...prev, name: values.name } : null);
+        setIsEditModalOpen(false);
       } else {
         setError(response.data.message || '更新分类失败');
       }
@@ -164,16 +98,15 @@ const CateDetailPage = () => {
       const errorMessage = err.response?.data?.message || err.message || '更新请求发生网络错误';
       setError(errorMessage);
     } finally {
-      setIsEditModalOpen(false);
+      setSaving(false);
     }
   };
   
-  // 删除分类逻辑 (已确认无误)
   const handleDeleteCategory = async () => {
     if (!category) return;
     try {
       await categoryApi.deleteCategory(category.id);
-      navigate('/catelist'); // 成功后跳转
+      navigate('/categorylist');
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || '删除分类失败';
       setError(errorMessage);
@@ -192,9 +125,8 @@ const CateDetailPage = () => {
     });
   };
 
-  // 新增: 处理文章标题搜索
   const handleArticleSearch = (value: string) => {
-    setPage(1); // 搜索时重置到第一页
+    setPage(1);
     setSubmittedSearch(value);
   };
   
@@ -235,7 +167,6 @@ const CateDetailPage = () => {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <Title level={5} style={{ margin: 0 }}>该分类下的文章:</Title>
-                   {/* 新增: 文章标题搜索框 */}
                   <Search
                     placeholder="搜索文章标题"
                     onSearch={handleArticleSearch}
@@ -276,14 +207,18 @@ const CateDetailPage = () => {
         </Spin>
       </div>
       
-      <CategoryEditModal 
-        open={isEditModalOpen} 
-        category={category} 
-        onClose={() => setIsEditModalOpen(false)} 
-        onSave={handleSaveCategory} 
-      />
+      <EntityFormModal<IReqCategory>
+        open={isEditModalOpen}
+        title="编辑分类"
+        loading={saving}
+        initialValues={category}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveCategory}
+      >
+        <CategoryFormFields />
+      </EntityFormModal>
     </>
   );
 };
 
-export default CateDetailPage;
+export default CategoryDetailPage;

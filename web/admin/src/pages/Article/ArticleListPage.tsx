@@ -12,7 +12,7 @@ import {
   Alert,
   Empty
 } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, /*EditOutlined,*/ PlusOutlined } from '@ant-design/icons';
 import type { TableProps } from 'antd';
 
 const { Search } = Input;
@@ -28,6 +28,7 @@ const ArticleListPage = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalArticles, setTotalArticles] = useState(0);
+  const [refreshTrigger] = useState(0);
 
   const navigate = useNavigate();
 
@@ -49,6 +50,8 @@ const ArticleListPage = () => {
           setTotalArticles(result.total || 0);
         } else {
           setError(result.message || '获取文章列表失败');
+          setArticles([]);
+          setTotalArticles(0);
         }
       } catch (err: any) {
         setError(err.response?.data?.message || '发生未知网络错误');
@@ -58,10 +61,10 @@ const ArticleListPage = () => {
     };
 
     fetchArticles();
-  }, [page, pageSize, submittedSearch]); // 当这些状态变化时重新获取数据
+  }, [page, pageSize, submittedSearch, refreshTrigger]); // 当这些状态变化时重新获取数据
 
   const handleSearch = (value: string) => {
-    setPage(1); // 搜索时回到第一页
+    setPage(1);
     setSubmittedSearch(value);
   };
 
@@ -80,7 +83,6 @@ const ArticleListPage = () => {
       setError(err.response?.data?.message || '删除失败');
     }
   };
-
   const showDeleteConfirm = (id: number) => {
     Modal.confirm({
       title: '确认删除',
@@ -99,7 +101,6 @@ const ArticleListPage = () => {
   };
 
   // 定义 Table 的列
-  // 最终修正版的 columns 定义
   const columns: TableProps<IRspArticle>['columns'] = [
     {
       title: 'ID',
@@ -129,8 +130,8 @@ const ArticleListPage = () => {
       align: 'right',
       render: (_, record) => (
         <Space size="middle">
-          <Button size="small" onClick={() => navigate(`/article/${record.id}`)}>详情</Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/article/edit/${record.id}`)} />
+          <Button size="small" onClick={() => navigate(`/articledetail/${record.id}`)}>详情</Button>
+          {/* <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/article/edit/${record.id}`)} /> */}
           <Button size="small" icon={<DeleteOutlined />} danger onClick={() => showDeleteConfirm(record.id)} />
         </Space>
       ),
@@ -152,7 +153,7 @@ const ArticleListPage = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => navigate('/article/create')}
+              onClick={() => navigate('/article/add')}
             >
               写文章
             </Button>

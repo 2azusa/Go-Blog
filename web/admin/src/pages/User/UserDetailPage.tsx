@@ -14,11 +14,12 @@ import {
   Modal,
   message
 } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
-import type { IReqUser, IRspUser, /* IRspArticle*/ } from '../../types/types';
-import UserEditModal from '../../components/UserEditModal'; 
 const { Title } = Typography;
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { IReqUser, IRspUser } from '../../types/types';
+import EntityFormModal from '../../components/EntityFormModal';
+import UserFormFields from '../../components/UserFormFields';
 
 const UserDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,8 +27,8 @@ const UserDetailPage = () => {
   
   const [user, setUser] = useState<IRspUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [saving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -177,7 +178,16 @@ const UserDetailPage = () => {
           </Card>
         </Spin>
       </div>
-      <UserEditModal open={isModalOpen} user={user} onClose={() => setIsModalOpen(false)} onSave={handleSaveUser} />
+      <EntityFormModal<IReqUser>
+        open={isModalOpen}
+        title="编辑用户信息"
+        loading={saving}
+        initialValues={user}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveUser}
+      >
+        <UserFormFields mode="edit" />
+      </EntityFormModal>
     </>
   );
 };

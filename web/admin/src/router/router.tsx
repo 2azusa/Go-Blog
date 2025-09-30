@@ -1,19 +1,20 @@
 import { createBrowserRouter } from 'react-router-dom';
 
-import LoginPage from '../pages/Auth/LoginPage.tsx'
-import AdminLayout from '../components/AdminLayout.tsx'
+import IndexPage from '../pages/IndexPage.tsx';
+import NotFoundPage from '../pages/NotFoundPage.tsx';
+import LoginPage from '../pages/Auth/LoginPage.tsx';
+import RegisterPage from '../pages/Auth/RegisterPage.tsx';
+import AdminLayout from '../components/AdminLayout.tsx';
 import ProtectedRoute from './ProtectedRoute.tsx';
 
-import IndexPage from '../pages/IndexPage.tsx';
-// import AddArtPage from '../pages/AddArtPage.tsx';
 import ArticleListPage from '../pages/Article/ArticleListPage.tsx';
-import CateListPage from '../pages/Category/CateListPage.tsx';
-import CateDetailPage from '../pages/Category/CateDetailPage.tsx';
-// import ProfilePage from '../pages/ProfilePage.tsx';
+import EditArticlePage from '../pages/Article/EditArticlePage.tsx';
+import ArticleDetailPage from '../pages/Article/ArticleDetailPage.tsx';
+import CategoryListPage from '../pages/Category/CategoryListPage.tsx';
+import CategoryDetailPage from '../pages/Category/CategoryDetailPage.tsx';
 import UserListPage from '../pages/User/UserListPage.tsx';
-import NotFoundPage from '../pages/NotFoundPage.tsx';
 import UserDetailPage from '../pages/User/UserDetailPage.tsx';
-import RegisterPage from '../pages/Auth/RegisterPage.tsx';
+import ProfilePage from '../pages/User/ProfilePage.tsx';
 
 export const router = createBrowserRouter([
   {
@@ -36,25 +37,29 @@ export const router = createBrowserRouter([
         index: true,
         element: <IndexPage />,
       },
-      // {
-      //   path: 'addart/:id?',
-      //   element: <AddArtPage />,
-      // },
       {
         path: 'articlelist',
         element: <ArticleListPage />,
       },
-      // {
-      //   path: 'articledetail/:id?',
-      //   element: <ArticleDetailPage />
-      // },
       {
-        path: 'catelist',
-        element: <CateListPage />,
+        path: 'article/add',
+        element: <EditArticlePage />,
       },
       {
-        path: 'catedetail/:id?',
-        element: <CateDetailPage />
+        path: 'article/edit/:id',
+        element: <EditArticlePage />,
+      },
+      {
+        path: 'articledetail/:id?',
+        element: <ArticleDetailPage />
+      },
+      {
+        path: 'categorylist',
+        element: <CategoryListPage />,
+      },
+      {
+        path: 'categorydetail/:id?',
+        element: <CategoryDetailPage />
       },
       {
         path: 'userlist',
@@ -64,10 +69,10 @@ export const router = createBrowserRouter([
         path: 'userdetail/:id?',
         element: <UserDetailPage />
       },
-      // {
-      //   path: 'profile',
-      //   element: <ProfilePage />,
-      // },
+      {
+        path: 'profile',
+        element: <ProfilePage />,
+      },
     ],
   },
   {

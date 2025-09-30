@@ -121,4 +121,11 @@ export const uploadApi = {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
     },
-}
+    uploadImage: (data: FormData): AxiosPromise<IApiResponse<{ url: string }>> => 
+    api.post('/upload', data, {
+        // 必须设置正确的 Content-Type，让后端知道这是一个文件上传请求
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    }),
+};

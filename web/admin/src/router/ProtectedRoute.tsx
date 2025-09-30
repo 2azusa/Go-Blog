@@ -17,8 +17,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
 
   if (!token) {
-    // 如果用户未登录，重定向到登录页
-    // 并通过 state 保存用户原本想访问的页面路径
+    // 如果用户未登录，重定向到登录页，并通过 state 保存用户原本想访问的页面路径
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

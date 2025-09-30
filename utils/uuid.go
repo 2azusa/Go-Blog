@@ -11,7 +11,7 @@ import (
 const codeHub = "1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
 const codeLength = 4
 
-// 生成为一个字符串（激活码）
+// 生成激活码
 func CreateUUID() string {
 	// New creates a new random UUID or panics.
 	id := uuid.New()

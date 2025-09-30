@@ -88,7 +88,6 @@ func CheckLogin(username string, password string) (*User, error) {
 	return &user, nil
 }
 
-// ！！！!!!！！！
 // todo
 func CheckAdminLogin(username string, password string) (*User, error) {
 	var user User
@@ -103,9 +102,9 @@ func CheckAdminLogin(username string, password string) (*User, error) {
 		return nil, errmsg.ErrEmailNotActive
 	}
 	if user.Role != 1 {
-		fmt.Println("该用户不是管理员用户")
-		return nil, err
+		return nil, errmsg.ErrNoAdminPermission
 	}
+
 	passwordMatch, err := CheckPassword(user.Password, password)
 	if err != nil {
 		return nil, err

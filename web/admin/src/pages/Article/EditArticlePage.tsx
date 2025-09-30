@@ -54,7 +54,6 @@ const EditArticlePage = () => {
           }
         }
       } catch (err: any) {
-        // api.ts 中的拦截器已经处理了 message.error, 这里只设置页面错误状态
         setError(err.message || '数据加载失败');
       } finally {
         setPageLoading(false);

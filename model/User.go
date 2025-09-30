@@ -30,19 +30,6 @@ const (
 	HashBytes = 32 // 哈希的长度
 )
 
-// // BeforeUpdate 是一个 GORM 钩子，在更新 User 记录前自动执行
-// func (u *User) BeforeUpdate(tx *gorm.DB) (err error) {
-// 	// 仅当 Password 字段被明确修改时才执行哈希
-// 	if tx.Statement.Changed("Password") {
-// 		hashedPassword, err := HashPassword(u.Password)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		u.Password = hashedPassword
-// 	}
-// 	return nil
-// }
-
 // HashPassword 使用 scrypt 算法对密码进行哈希
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, SaltBytes)
@@ -184,25 +171,35 @@ func UpdateUserAndProfile(id uint, req *dto.ReqEditUser) error {
 	})
 }
 
-// DeleteUser 在一个事务中，删除用户及其关联的所有数据
+// // DeleteUser 在一个事务中，删除用户及其关联的所有数据
+// func DeleteUser(id uint) error {
+// 	return db.Transaction(func(tx *gorm.DB) error {
+// 		var user User
+// 		if err := tx.First(&user, id).Error; err != nil {
+// 			if errors.Is(err, gorm.ErrRecordNotFound) {
+// 				return errmsg.ErrUserNotExist
+// 			}
+// 			return err
+// 		}
+// 		if err := tx.Where("user_id = ?", id).Delete(&Profile{}).Error; err != nil {
+// 			return err
+// 		}
+// 		if err := tx.Where("user_id = ?", id).Delete(&UserArticle{}).Error; err != nil {
+// 			return err
+// 		}
+// 		if err := tx.Delete(&user).Error; err != nil {
+// 			return err
+// 		}
+// 		return nil
+// 	})
+// }
+
 func DeleteUser(id uint) error {
-	return db.Transaction(func(tx *gorm.DB) error {
-		var user User
-		if err := tx.First(&user, id).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return errmsg.ErrUserNotExist
-			}
-			return err
+	if err := db.Delete(&User{}, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errmsg.ErrUserNotExist
 		}
-		if err := tx.Where("user_id = ?", id).Delete(&Profile{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("user_id = ?", id).Delete(&UserArticle{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Delete(&user).Error; err != nil {
-			return err
-		}
-		return nil
-	})
+		return err
+	}
+	return nil
 }

@@ -35,8 +35,7 @@ func AddArticle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": errmsg.CreateArticleSuccess.Status,
-		// "data":    newArticle,
+		"status":  errmsg.CreateArticleSuccess.Status,
 		"message": errmsg.CreateArticleSuccess.Message,
 	})
 }
@@ -209,8 +208,7 @@ func AddComment(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status": errmsg.AddCommentSuccess.Status,
-		// "data":    newComment,
+		"status":  errmsg.AddCommentSuccess.Status,
 		"message": errmsg.AddCommentSuccess.Message,
 	})
 }

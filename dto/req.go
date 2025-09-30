@@ -77,10 +77,6 @@ type ReqArticle struct {
 	Img     string `json:"img"     binding:"omitempty,url"`
 }
 
-// type ReqFindComments struct {
-// 	PageReq
-// }
-
 type ReqAddComment struct {
 	ArticleID uint   `json:"articleId" binding:"required,gte=1"`
 	Content   string `json:"content"    binding:"required,max=500"`

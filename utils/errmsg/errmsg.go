@@ -104,7 +104,7 @@ var (
 	ErrTokenExpired       = NewAppError(http.StatusUnauthorized, 1005, "TOKEN已过期")
 	ErrTokenWrong         = NewAppError(http.StatusUnauthorized, 1006, "TOKEN不正确")
 	ErrTokenTypeWrong     = NewAppError(http.StatusUnauthorized, 1007, "TOKEN格式错误")
-	ErrUserNoRight        = NewAppError(http.StatusForbidden, 1008, "该用户无权限")
+	ErrNoAdminPermission  = NewAppError(http.StatusForbidden, 1008, "该用户无管理员权限")
 	ErrCreateSessionError = NewAppError(http.StatusInternalServerError, 1009, "创建会话失败，请稍后重试")
 
 	// 文章模块错误 (2000...)

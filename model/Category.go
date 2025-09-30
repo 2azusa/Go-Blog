@@ -112,29 +112,3 @@ func FindCategoryById(id uint) (*Category, error) {
 	}
 	return &cate, nil
 }
-
-// // GetCateArticle 查询分类下的所有文章
-// func GetCateArticle(id int, pageSize int, pageNum int) ([]Article, int, error) {
-// 	var cate Category
-// 	if err := db.First(&cate, id).Error; err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return nil, 0, errmsg.ErrCateNotExist
-// 		}
-// 		return nil, 0, err
-// 	}
-
-// 	var cateArticleList []Article
-// 	var total int64
-// 	DB := db.Model(&Article{}).Where("cid = ?", id)
-
-// 	if err := DB.Count(&total).Error; err != nil {
-// 		return nil, 0, err
-// 	}
-
-// 	err := DB.Limit(pageSize).Offset((pageNum - 1) * pageSize).Find(&cateArticleList).Error
-// 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-// 		return nil, 0, err
-// 	}
-
-// 	return cateArticleList, int(total), nil
-// }

@@ -96,7 +96,7 @@ const CategoryListPage = () => {
         renderItem={(category) => (
           <List.Item>
             <List.Item.Meta
-              title={<RouterLink to={`/category/${category.id}`}>{category.name}</RouterLink>}
+              title={<RouterLink to={`/categorydetail/${category.id}`}>{category.name}</RouterLink>}
               description={`ID: ${category.id}`}
             />
           </List.Item>

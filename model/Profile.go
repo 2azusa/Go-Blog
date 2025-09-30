@@ -9,8 +9,8 @@ import (
 )
 
 type Profile struct {
-	gorm.Model
-	UserID uint   `gorm:"not null;unique" json:"userId"`
+	BaseModel
+	UserID uint   `gorm:"not null;uniqueIndex;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"userId"` // OnDelete: 当在user中被删除，profile自动删除
 	Name   string `gorm:"type:varchar(50)" json:"name"`
 	Desc   string `gorm:"type:varchar(200)" json:"desc"`
 	QqChat string `gorm:"type:varchar(32)" json:"qqchat"`
@@ -24,7 +24,7 @@ type Profile struct {
 // GetProfileByUserID 根据用户ID获取个人信息
 func GetProfileByUserID(userID uint) (*Profile, error) {
 	var profile Profile
-	err := db.First(&profile, userID).Error
+	err := db.Where("user_id = ?", userID).First(&profile).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errmsg.ErrUserNotExist

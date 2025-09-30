@@ -2,15 +2,15 @@ import { useEffect } from 'react';
 import { Modal, Form, Input, Select } from 'antd';
 import { useForm } from 'antd/es/form/Form';
 
-import type { IUser } from '../types/types'; // 假设 IUser 类型定义在这里
+import type { IReqUser } from '../types/types';
 
 const { Option } = Select;
 
 interface UserEditModalProps {
   open: boolean;
-  user: IUser | null;
+  user: IReqUser | null;
   onClose: () => void;
-  onSave: (user: IUser) => void;
+  onSave: (user: IReqUser) => void;
 }
 
 const formItemLayout = {
@@ -20,7 +20,7 @@ const formItemLayout = {
 
 const UserEditModal = ({ open, user, onClose, onSave }: UserEditModalProps) => {
   // 1. 初始化 Ant Design 表单实例
-  const [form] = useForm<IUser>();
+  const [form] = useForm<IReqUser>();
 
   // 2. 使用 useEffect 来监听外部 user prop 的变化，并更新表单
   useEffect(() => {
@@ -35,7 +35,7 @@ const UserEditModal = ({ open, user, onClose, onSave }: UserEditModalProps) => {
     form
       .validateFields()
       .then(values => {
-        // 确保提交的是一个完整的 IUser 对象
+        // 确保提交的是一个完整的 IReqUser 对象
         // values 只包含表单中的字段，需要和原始 user 对象（尤其是 id）合并
         if (user) {
           onSave({ ...user, ...values });
@@ -56,7 +56,7 @@ const UserEditModal = ({ open, user, onClose, onSave }: UserEditModalProps) => {
       onCancel={onClose}
       onOk={handleOk}
       // 添加 destroyOnClose 可以在关闭时销毁内部组件，避免状态残留
-      destroyOnClose 
+      destroyOnHidden
     >
       {/* 5. 使用 Ant Design 的 Form */}
       <Form

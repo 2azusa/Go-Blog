@@ -7,8 +7,8 @@ func (UserArticle) TableName() string {
 
 // 在连接表中，article_id 和 user_id 的组合通常构成复合主键，
 type UserArticle struct {
-	ArticleId uint `gorm:"primaryKey" json:"article_id"`
-	UserId    uint `gorm:"primaryKey" json:"user_id"`
+	ArticleId uint `gorm:"primaryKey" json:"articleId"`
+	UserId    uint `gorm:"primaryKey" json:"userId"`
 }
 
 // CreateUserArticle 在 user_article 连接表中创建一条新记录。

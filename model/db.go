@@ -16,6 +16,13 @@ import (
 var db *gorm.DB
 var Redis *redis.Client
 
+type BaseModel struct {
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
+}
+
 // InitDb 初始化数据库连接 (GORM v2)
 func InitDb() {
 	// 构造 DSN (Data Source Name)

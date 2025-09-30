@@ -1,23 +1,23 @@
 import { useEffect } from 'react';
 import { Modal, Form, Input, Select } from 'antd';
-
+import type { IReqUser } from '../types/types';
 // antd 的 Form 组件有自己的 hooks
 import { useForm } from 'antd/es/form/Form';
 
 const { Option } = Select;
 
-export interface INewUser {
-  username: string;
-  password?: string;
-  email: string;
-  role: number;
-}
+// export interface IReqUser {
+//   username: string;
+//   password?: string;
+//   email: string;
+//   role: number;
+// }
 
 interface UserAddModalProps {
   open: boolean;
   onClose: () => void;
   // onSave 回调现在可以接收 antd Form 格式化的值
-  onSave: (values: INewUser) => void;
+  onSave: (values: IReqUser) => void;
 }
 
 // antd 的 Form.Item 有很好的布局功能
@@ -28,7 +28,7 @@ const formItemLayout = {
 
 const UserAddModal = ({ open, onClose, onSave }: UserAddModalProps) => {
   // 1. 使用 antd 的 useForm hook
-  const [form] = useForm<INewUser>();
+  const [form] = useForm<IReqUser>();
 
   // 2. 在弹窗打开时，重置表单字段
   useEffect(() => {

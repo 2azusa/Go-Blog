@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { categoryApi } from '../api/api';
+import { categoryApi } from '../../api/api';
 import {
   Card,
   List,
@@ -15,14 +15,13 @@ import {
   Input
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import type { ICategory, IReqFindCate } from '../types/types';
+import type { IRspCategory, IReqPagination } from '../../types/types';
 
 // --- 步骤 1: 迁移 CategoryAddModal 组件 ---
 interface ICategoryAddModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (newCategoryName: string) => void;
-  // 添加一个 loading 状态，用于在保存时显示按钮加载动画
   loading: boolean;
 }
 
@@ -56,7 +55,7 @@ const CategoryAddModal: React.FC<ICategoryAddModalProps> = ({ open, onClose, onS
       onCancel={onClose}
       onOk={handleOk}
       confirmLoading={loading} // 将外部 loading 状态绑定到确认按钮
-      destroyOnClose // 关闭时销毁 Modal 里的子元素
+      destroyOnHidden// 关闭时销毁 Modal 里的子元素
     >
       <Form form={form} layout="vertical" name="categoryAddForm">
         <Form.Item
@@ -73,7 +72,7 @@ const CategoryAddModal: React.FC<ICategoryAddModalProps> = ({ open, onClose, onS
 
 // --- 步骤 2: 迁移 CateListPage 页面 ---
 const CateListPage = () => {
-  const [categories, setCategories] = useState<ICategory[]>([]);
+  const [categories, setCategories] = useState<IRspCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false); // 用于添加分类时的 loading 状态
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +91,7 @@ const CateListPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const requestData: IReqFindCate  = {
+        const requestData: IReqPagination  = {
           pagenum: page, // 直接使用 state 中的 page
           pagesize: pageSize,
         };

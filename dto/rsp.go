@@ -9,7 +9,7 @@ type RspLogin struct {
 
 type RspUser struct {
 	ID        uint      `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"createdAt"`
 	Username  string    `json:"username"`
 	Email     string    `json:"email"`
 	Role      int       `json:"role"`

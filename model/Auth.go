@@ -75,8 +75,36 @@ func CheckLogin(username string, password string) (*User, error) {
 		}
 		return nil, err
 	}
-	if user.Status != "Y" { // 统一使用 "Y" 代表激活状态
+	if user.Status != "Y" {
 		return nil, errmsg.ErrEmailNotActive
+	}
+	passwordMatch, err := CheckPassword(user.Password, password)
+	if err != nil {
+		return nil, err
+	}
+	if !passwordMatch {
+		return nil, errmsg.ErrPasswordWrong
+	}
+	return &user, nil
+}
+
+// ！！！!!!！！！
+// todo
+func CheckAdminLogin(username string, password string) (*User, error) {
+	var user User
+	err := db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errmsg.ErrUserNotExist
+		}
+		return nil, err
+	}
+	if user.Status != "Y" {
+		return nil, errmsg.ErrEmailNotActive
+	}
+	if user.Role != 1 {
+		fmt.Println("该用户不是管理员用户")
+		return nil, err
 	}
 	passwordMatch, err := CheckPassword(user.Password, password)
 	if err != nil {

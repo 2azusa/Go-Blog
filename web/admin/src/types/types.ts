@@ -1,3 +1,5 @@
+// ========== 修正并统一后的所有类型定义 ==========
+
 export interface IApiResponse<T> {
   data: T;
   message: string;
@@ -7,13 +9,13 @@ export interface IApiResponse<T> {
 }
 
 export interface IReqPagination {
-  pageSize: number;
-  pageNum: number;
-  Query?: string; // users
-  title?: string // article
+  pagesize: number;
+  pagenum: number;
+  query?: string;
+  title?: string;
 }
 
-// authApi
+// --- authApi ---
 export interface IReqLogin {
   username: string;
   password: string;
@@ -26,24 +28,21 @@ export interface IReqRegister {
 export interface IReqActiveEmail {
   code: string;
 }
-
 export interface IReqLoginByEmail {
-    Email: string,
-    Code: string,
+  email: string; // PascalCase -> camelCase
+  code: string;  // PascalCase -> camelCase
 }
-
 export interface IReqSendEmailForCode {
   code: string;
 }
 
-// usersApi
+// --- usersApi ---
 export interface IReqUser {
   username: string;
   password?: string;
   email: string;
   role: number;
 }
-
 export interface IRspUser {
   id: number;
   createdAt: string;
@@ -52,17 +51,16 @@ export interface IRspUser {
   role: number;
 }
 
-// categoryApi
+// --- categoryApi ---
 export interface IReqCategory {
   name: string;
 }
-
 export interface IRspCategory {
   id: number;
   name: string;
 }
 
-// articlesApi
+// --- articlesApi ---
 export interface IReqArticle {
   title: string;
   cid: number;
@@ -70,55 +68,52 @@ export interface IReqArticle {
   content: string;
   img: string;
 }
-
 export interface IRspArticle {
   id: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
   title: string;
-  cid: number; // 分类 id
   desc: string;
   content: string;
   img: string;
+  cid: number;
   category: IRspCategory;
   comments: IRspComment[];
 }
 
-// commentsApi
+// --- commentsApi ---
 export interface IReqComment {
-  article_id: number;
+  articleId: number; // snake_case -> camelCase
   content: string;
 }
-
 export interface IRspComment {
   id: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
   commentator: string;
   content: string;
-  article_id: number;
-  parent_id: number; 
+  articleId: number; // snake_case -> camelCase
+  parentId: number;  // snake_case -> camelCase
 }
 
-// profileApi
+// --- profileApi ---
 export interface IReqProfile {
   name: string;
   desc: string;
-  qq_chat: string;
+  qqchat: string;
   wechat: string;
   weibo: string;
   email: string;
   img: string;
   avatar: string;
 }
-
 export interface IRspProfile {
-  user_id: number;
+  userId: number;
   name: string;
   desc: string;
-  qq_chat: string;
+  qqchat: string;
   wechat: string;
   weibo: string;
   email: string;
@@ -126,6 +121,7 @@ export interface IRspProfile {
   avatar: string;
 }
 
+// ---通用---
 export interface IRspUpload {
   url: string;
 }

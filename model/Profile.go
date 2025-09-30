@@ -10,9 +10,10 @@ import (
 
 type Profile struct {
 	gorm.Model
-	UserID uint   `gorm:"not null;unique" json:"user_id"`
+	UserID uint   `gorm:"not null;unique" json:"userId"`
 	Name   string `gorm:"type:varchar(50)" json:"name"`
 	Desc   string `gorm:"type:varchar(200)" json:"desc"`
+	QqChat string `gorm:"type:varchar(32)" json:"qqchat"`
 	WeChat string `gorm:"type:varchar(50)" json:"wechat"`
 	Weibo  string `gorm:"type:varchar(50)" json:"weibo"`
 	Email  string `gorm:"type:varchar(32)" json:"email"`

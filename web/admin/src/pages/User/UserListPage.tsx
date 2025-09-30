@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { usersApi } from '../api/api';
+import { usersApi } from '../../api/api';
 import {
   Card,
   List,
@@ -10,22 +10,21 @@ import {
   Input,
   Button,
   Space,
-  Empty
+  Empty,
+  message
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
-import type { IUser, IReqFindUser, IReqAddUser } from '../types/types';
-import UserAddModal from '../components/UserAddModal';
-import type { INewUser } from '../components/UserAddModal';
+import type { IReqUser, IRspUser, IReqPagination } from '../../types/types';
+import UserAddModal from '../../components/UserAddModal';
 
 const { Search } = Input;
 
 const UserListPage = () => {
-  const [users, setUsers] = useState<IUser[]>([]);
+  const [users, setUsers] = useState<IRspUser[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- 关键改动: Antd 分页从 1 开始 ---
   const [page, setPage] = useState(1); 
   const [pageSize, setPageSize] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -33,39 +32,40 @@ const UserListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const requestData: IReqFindUser = {
-          idorname: searchTerm,
-          // --- API 请求也使用从 1 开始的页码 ---
-          pagenum: page, 
-          pagesize: pageSize,
-        };
-        
-        const response = await usersApi.getUsers(requestData);
-        const result = response.data;
+  // 1. 将数据获取逻辑封装到一个 useCallback 函数中
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const requestData: IReqPagination = {
+        query: searchTerm,
+        pagenum: page,
+        pagesize: pageSize,
+      };
+      
+      const response = await usersApi.getUsers(requestData);
+      const result = response.data;
 
-        if (result && result.status === 200) {
-          setUsers(result.data || []);
-          setTotalUsers(result.total || 0);
-        } else {
-          setError(result.message || '获取用户列表失败');
-          setUsers([]);
-          setTotalUsers(0);
-        }
-      } catch (err: any) {
-        const errorMessage = err.response?.data?.message || err.message || '网络错误';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
+      if (result && result.status === 200) {
+        setUsers(result.data || []);
+        setTotalUsers(result.total || 0);
+      } else {
+        setError(result.message || '获取用户列表失败');
+        setUsers([]);
+        setTotalUsers(0);
       }
-    };
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || '网络错误';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, pageSize, searchTerm]); // 依赖项与之前 useEffect 相同
 
+  // 2. useEffect 现在只负责调用这个函数
+  useEffect(() => {
     fetchUsers();
-  }, [page, pageSize, searchTerm]); // 触发条件变为 searchTerm
+  }, [fetchUsers]); // 依赖项变为 fetchUsers 函数本身
 
   // Input.Search 的 onSearch 事件处理函数
   const handleSearch = (value: string) => {
@@ -73,14 +73,14 @@ const UserListPage = () => {
     setSearchTerm(value);
   };
 
-  const handleAddUser = async (newUser: INewUser) => {
+  const handleAddUser = async (newUser: IReqUser) => {
     // ... (handleAddUser 逻辑基本不变)
     if (!newUser.password) {
       setError('密码不能为空，请重新输入。');
       return; 
     }
     try {
-      const postData: IReqAddUser = {
+      const postData: IReqUser = {
         username: newUser.username,
         password: newUser.password,
         email: newUser.email,
@@ -89,13 +89,12 @@ const UserListPage = () => {
       
       await usersApi.addUser(postData);
       
+      message.success('用户添加成功！');
       setIsAddModalOpen(false);
-      // 刷新列表
-      setSearchTerm(''); // 触发 useEffect 重新加载
-      setPage(1);
+      fetchUsers();
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || '添加用户失败';
-      setError(errorMessage);
+      message.error(errorMessage);
     }
   };
 
@@ -119,8 +118,8 @@ const UserListPage = () => {
           <List.Item>
             <List.Item.Meta
               // 将标题包裹在 Link 中以实现跳转
-              title={<RouterLink to={`/userdetail/${user.ID}`}>{user.username}</RouterLink>}
-              description={`ID: ${user.ID} | 邮箱: ${user.email}`}
+              title={<RouterLink to={`/userdetail/${user.id}`}>{user.username}</RouterLink>}
+              description={`ID: ${user.id} | 邮箱: ${user.email}`}
             />
           </List.Item>
         )}
@@ -147,7 +146,6 @@ const UserListPage = () => {
             
             <Divider />
 
-            {/* Spin 组件可以包裹加载中的区域，但 List 自带 loading 属性更方便 */}
             {renderContent()}
 
             <Pagination

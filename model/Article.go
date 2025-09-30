@@ -8,22 +8,22 @@ import (
 )
 
 type Article struct {
-	gorm.Model
+	BaseModel
 	Title    string   `gorm:"type:varchar(100);not null" json:"title"`
 	Cid      uint     `gorm:"notnull" json:"cid"`
 	Desc     string   `gorm:"type:varchar(200)" json:"desc"`
 	Content  string   `gorm:"type:longtext;not null" json:"content"`
 	Img      string   `gorm:"type:varchar(200)" json:"img"`
-	Category Category `gorm:"foreignkey:Cid"`
+	Category Category `gorm:"foreignkey:Cid" json:"category"`
 	Comments []Comment
 }
 
 type Comment struct {
-	gorm.Model
+	BaseModel
 	Commentator string `gorm:"type:varchar(20);not null" json:"commentator"`
 	Content     string `gorm:"type:longtext;not null" json:"content"`
-	ArticleID   uint   `gorm:"not null" json:"article_id"`
-	ParentID    uint
+	ArticleID   uint   `gorm:"not null" json:"articleId"`
+	ParentID    uint   `json:"parentId"`
 }
 
 // CreateArticle 添加文章

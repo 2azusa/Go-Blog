@@ -1,19 +1,19 @@
 import { createBrowserRouter } from 'react-router-dom';
 
-import LoginPage from '../pages/LoginPage.tsx'
+import LoginPage from '../pages/Auth/LoginPage.tsx'
 import AdminLayout from '../components/AdminLayout.tsx'
 import ProtectedRoute from './ProtectedRoute.tsx';
 
 import IndexPage from '../pages/IndexPage.tsx';
 // import AddArtPage from '../pages/AddArtPage.tsx';
-import ArticleListPage from '../pages/ArticleListPage.tsx';
-import CateListPage from '../pages/CateListPage.tsx';
-import CateDetailPage from '../pages/CateDetailPage.tsx';
+import ArticleListPage from '../pages/Article/ArticleListPage.tsx';
+import CateListPage from '../pages/Category/CateListPage.tsx';
+import CateDetailPage from '../pages/Category/CateDetailPage.tsx';
 // import ProfilePage from '../pages/ProfilePage.tsx';
-import UserListPage from '../pages/UserListPage.tsx';
+import UserListPage from '../pages/User/UserListPage.tsx';
 import NotFoundPage from '../pages/NotFoundPage.tsx';
-import UserDetailPage from '../pages/UserDetailPage.tsx';
-import RegisterPage from '../pages/RegisterPage.tsx';
+import UserDetailPage from '../pages/User/UserDetailPage.tsx';
+import RegisterPage from '../pages/Auth/RegisterPage.tsx';
 
 export const router = createBrowserRouter([
   {

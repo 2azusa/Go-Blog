@@ -82,6 +82,6 @@ type ReqArticle struct {
 // }
 
 type ReqAddComment struct {
-	ArticleID uint   `json:"article_id" binding:"required,gte=1"`
+	ArticleID uint   `json:"articleId" binding:"required,gte=1"`
 	Content   string `json:"content"    binding:"required,max=500"`
 }

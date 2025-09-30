@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { articlesApi } from '../api/api';
-import type { IRspFindArticle, IReqFindArticle } from '../types/types';
+import { articlesApi } from '../../api/api';
+import type { IReqPagination, IRspArticle } from '../../types/types';
 import {
   Card,
   Table,
@@ -18,14 +18,13 @@ import type { TableProps } from 'antd';
 const { Search } = Input;
 
 const ArticleListPage = () => {
-  const [articles, setArticles] = useState<IRspFindArticle[]>([]);
+  const [articles, setArticles] = useState<IRspArticle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
   // 用于提交给 API 的搜索词
   const [submittedSearch, setSubmittedSearch] = useState('');
 
-  // antd 分页状态，从 1 开始
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalArticles, setTotalArticles] = useState(0);
@@ -37,7 +36,7 @@ const ArticleListPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const requestData: IReqFindArticle = {
+        const requestData: IReqPagination = {
           title: submittedSearch,
           pagenum: page,
           pagesize: pageSize,
@@ -46,8 +45,8 @@ const ArticleListPage = () => {
         const { data: result } = await articlesApi.getArticles(requestData);
 
         if (result && result.status === 200) {
-          setArticles(result.data.articles || []);
-          setTotalArticles(result.data.total || 0);
+          setArticles(result.data || []);
+          setTotalArticles(result.total || 0);
         } else {
           setError(result.message || '获取文章列表失败');
         }
@@ -94,21 +93,35 @@ const ArticleListPage = () => {
   };
 
   // antd Table 的分页变化处理
-  const handleTableChange: TableProps<IRspFindArticle>['onChange'] = (pagination) => {
+  const handleTableChange: TableProps<IRspArticle>['onChange'] = (pagination) => {
     setPage(pagination.current || 1);
     setPageSize(pagination.pageSize || 10);
   };
 
   // 定义 Table 的列
-  const columns: TableProps<IRspFindArticle>['columns'] = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
-    { title: '标题', dataIndex: 'title', key: 'title' },
-    { title: '分类', dataIndex: 'name', key: 'name', render: (name) => name || '未分类' },
-    { 
-      title: '创建时间', 
-      dataIndex: 'CreatedAt', 
-      key: 'CreatedAt',
-      render: (date: string) => new Date(date).toLocaleString()
+  // 最终修正版的 columns 定义
+  const columns: TableProps<IRspArticle>['columns'] = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 80,
+    },
+    {
+      title: '标题',
+      dataIndex: 'title',
+      key: 'title',
+    },
+    {
+      title: '分类',
+      key: 'category',
+      render: (_, record: IRspArticle) => record.category?.name || '未分类',
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => (date ? new Date(date).toLocaleString() : 'N/A'),
     },
     {
       title: '操作',

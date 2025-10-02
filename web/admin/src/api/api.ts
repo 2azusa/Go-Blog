@@ -2,10 +2,10 @@ import axios from 'axios';
 import type { AxiosPromise } from 'axios';
 import { message } from 'antd';
 import type {
-  IApiResponse, IRspUser, IRspProfile, IRspArticle, IRspCategory, IRspComment, IRspUpload,
+  IApiResponse, IRspUser, IRspProfile, IRspArticle, IRspCategory, IRspComment, /*IRspUpload,*/
   IReqUser, IReqCategory, IReqArticle, IReqProfile, IReqComment, IReqPagination,
-  IReqLogin, IReqRegister,/*IReqActiveEmail,*/ IReqLoginByEmail, IReqSendEmailForCode,
-} from '../types/types';
+  IReqLogin, IReqRegister,/*IReqActiveEmail, IReqLoginByEmail, IReqSendEmailForCode,*/ 
+} from './types';
 
 const api = axios.create({
     baseURL: 'http://localhost:8080/api/v1',
@@ -68,12 +68,12 @@ api.interceptors.response.use(
 export const authApi = {
     login: (data: IReqLogin): AxiosPromise<IApiResponse<null>> => api.post('/login', data), // 用户名密码登陆
     register: (data: IReqRegister): AxiosPromise<IApiResponse<null>> => api.post('/register', data), // 用户注册
-    loginByEmail: (data: IReqLoginByEmail): AxiosPromise<IApiResponse<null>> => api.post('/login/email', data), // 邮箱验证码登陆
-    sendVerificationEmail: (data: IReqSendEmailForCode): AxiosPromise<IApiResponse<null>> => api.post('/email/code', data), // 发送验证码
+    // loginByEmail: (data: IReqLoginByEmail): AxiosPromise<IApiResponse<null>> => api.post('/login/email', data), // 邮箱验证码登陆
+    // sendVerificationEmail: (data: IReqSendEmailForCode): AxiosPromise<IApiResponse<null>> => api.post('/email/code', data), // 发送验证码
     // activateEmail: (params: IReqActiveEmail): AxiosPromise<IApiResponse<null>> => api.get('/active', { params }), // 邮箱激活链接
 };
 
-export const usersApi = {
+export const usersApi = {   
     getUsers: (params: IReqPagination): AxiosPromise<IApiResponse<IRspUser[]>> => api.get('/users', { params }), // 获取用户列表
     getUserInfo: (id: number): AxiosPromise<IApiResponse<IRspUser>> => api.get(`/users/${id}`), // 获取指定用户详情
     addUser: (data: IReqUser): AxiosPromise<IApiResponse<null>> => api.post('/users/add', data), // 添加用户
@@ -113,17 +113,16 @@ export const commentsApi = {
 };
 
 export const uploadApi = {
-    // 上传文件
-    uploadFile: (file: File): AxiosPromise<IApiResponse<IRspUpload>> => {
-        const formData = new FormData();
-        formData.append('file', file);
-        return api.post('/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-    },
+    // // 上传文件
+    // uploadFile: (file: File): AxiosPromise<IApiResponse<IRspUpload>> => {
+    //     const formData = new FormData();
+    //     formData.append('file', file);
+    //     return api.post('/upload', formData, {
+    //         headers: { 'Content-Type': 'multipart/form-data' },
+    //     });
+    // },
     uploadImage: (data: FormData): AxiosPromise<IApiResponse<{ url: string }>> => 
     api.post('/upload', data, {
-        // 必须设置正确的 Content-Type，让后端知道这是一个文件上传请求
         headers: {
             'Content-Type': 'multipart/form-data',
         },

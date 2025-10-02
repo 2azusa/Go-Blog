@@ -17,9 +17,8 @@ import {
   Empty
 } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { IReqCategory, IReqPagination, IRspArticle, IRspCategory } from '../../types/types';
+import type { IReqCategory, IReqPagination, IRspArticle, IRspCategory } from '../../api/types';
 
-// 引入新的可复用组件
 import EntityFormModal from '../../components/EntityFormModal'; 
 import CategoryFormFields from '../../components/CategoryFormFields';
 
@@ -39,7 +38,7 @@ const CategoryDetailPage = () => {
   const [pageSize, setPageSize] = useState(10);
   const [totalArticles, setTotalArticles] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false); // 用于编辑保存时的loading状态
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchCategoryDetails = async () => {

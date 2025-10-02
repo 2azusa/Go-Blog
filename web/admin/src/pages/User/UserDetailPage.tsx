@@ -17,7 +17,7 @@ import {
 
 const { Title } = Typography;
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { IReqUser, IRspUser } from '../../types/types';
+import type { IReqUser, IRspUser } from '../../api/types';
 import EntityFormModal from '../../components/EntityFormModal';
 import UserFormFields from '../../components/UserFormFields';
 

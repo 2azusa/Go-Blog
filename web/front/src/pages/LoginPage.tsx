@@ -1,421 +1,234 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api.ts';
+import { authApi } from '../api/api';
+import type { IReqLogin, IReqLoginByEmail } from '../api/types';
+import { useAuth } from '../context/AuthContext';
 
-// 导入 react-hook-form 和 yup
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-// 导入 MUI 组件
-import { Box, TextField, Button, Typography, Paper, Alert, Link } from '@mui/material';
-
-// 修改: IFormData 现在包含登录和注册所需的所有字段
-interface IFormData {
-  username: string;
-  password: string;
-  confirmPassword?: string; // 登录时可选
-  email?: string;           // 登录时可选
-}
-
-interface IApiResponse {
-  code: number;
-  message: string;
-  token?: string;
-}
-
-// 修改: 将原始 schema 重命名为 loginSchema
-const loginSchema = yup.object().shape({
-  username: yup
-    .string()
-    .required('用户名不能为空')
-    .min(4, '用户名长度必须在4-12之间')
-    .max(12, '用户名长度必须在4-12之间'),
-  password: yup
-    .string()
-    .required('密码不能为空')
-    .min(6, '密码长度必须在6-20之间')
-    .max(20, '密码长度必须在6-20之间'),
-});
-
-// 新增: 为注册功能专门创建一个 schema
-const registerSchema = yup.object().shape({
-  username: yup
-    .string()
-    .required('用户名不能为空')
-    .min(4, '用户名长度必须在4-12之间')
-    .max(12, '用户名长度必须在4-12之间'),
-  password: yup
-    .string()
-    .required('密码不能为空')
-    .min(6, '密码长度必须在6-20之间')
-    .max(20, '密码长度必须在6-20之间'),
-  confirmPassword: yup
-    .string()
-    .required('请再次输入密码')
-    .oneOf([yup.ref('password')], '两次输入的密码不一致'), // 确保该字段的值与密码字段一致
-  email: yup
-    .string()
-    .email('请输入有效的邮箱地址')
-    .required('邮箱不能为空'),
-});
-
-
-const LoginPage = () => {
+export default function LoginPage() {
   const navigate = useNavigate();
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [apiSuccess, setApiSuccess] = useState<string | null>(null); // 新增: 用于显示成功消息的 state
-  const [isLoginMode, setIsLoginMode] = useState(true); // 新增: 用于在登录/注册模式间切换的 state
+  const { login } = useAuth();
+  const [loginType, setLoginType] = useState<'password' | 'email'>('password');
 
-  // 修改: resolver 现在会根据当前模式条件性地使用正确的 schema
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<IFormData>({
-    resolver: yupResolver(isLoginMode ? loginSchema : registerSchema),
-  });
+  const [passwordFormData, setPasswordFormData] = useState<IReqLogin>({ username: '', password: '' });
+  const [emailFormData, setEmailFormData] = useState<IReqLoginByEmail>({ email: '', code: '' });
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // 新增: 切换表单模式的函数
-  const toggleMode = () => {
-    setIsLoginMode((prev) => !prev);
-    reset(); // 切换模式时重置表单字段和错误
-    setApiError(null);
-    setApiSuccess(null);
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordFormData({ ...passwordFormData, [e.target.name]: e.target.value });
   };
 
-  // 修改: onSubmit 函数现在同时处理登录和注册逻辑
-  const onSubmit = async (data: IFormData) => {
-    setApiError(null);
-    setApiSuccess(null);
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmailFormData({ ...emailFormData, [e.target.name]: e.target.value });
+  };
 
-    if (isLoginMode) {
-      // --- 登录逻辑 ---
-      try {
-        const { data: result } = await api.post<IApiResponse>('/login', {
-          username: data.username,
-          password: data.password,
-        });
-        if (result.code !== 200) {
-          setApiError(result.message || '登录失败，请重试');
-          return;
-        }
-        if (result.token) {
-          window.sessionStorage.setItem('token', result.token);
-          navigate('/'); // 登录成功后跳转到主页
-        } else {
-          setApiError('登录成功但未收到 Token');
-        }
-      } catch (error: any) {
-        const specificMessage = error.response?.data?.message;
-        if (specificMessage) {
-          setApiError(specificMessage);
-        }
-        console.error("Login failed:", error);
-      }
-    } else {
-      // --- 注册逻辑 ---
-      try {
-        const { data: result } = await api.post<IApiResponse>('/register', {
-            username: data.username,
-            password: data.password,
-            email: data.email,
-        });
-        if (result.code !== 200) {
-          setApiError(result.message || '注册失败，请重试');
-          return;
-        }
-        // 根据您的后端逻辑，注册会发送一封激活邮件
-        setApiSuccess('注册成功！请检查您的邮箱以激活账户。');
-        reset(); // 注册成功后清空表单
-      } catch (error: any) {
-        const specificMessage = error.response?.data?.message;
-        if (specificMessage) {
-          setApiError(specificMessage);
-        }
-        console.error("Registration failed:", error);
-      }
+  const handleSendCode = async () => {
+    if (!emailFormData.email) {
+      setError('请输入邮箱地址');
+      return;
+    }
+    setError(null);
+    try {
+      await authApi.sendVerificationEmail({ email: emailFormData.email });
+      setIsCodeSent(true);
+      setError('验证码已发送，请查收。');
+    } catch (err) {
+      setError('发送验证码失败，请稍后重试。');
+      console.error(err);
     }
   };
-  
-  const handleReset = () => {
-    reset();
-    setApiError(null);
-    setApiSuccess(null);
+
+  const handlePasswordSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    if (!passwordFormData.username || !passwordFormData.password) {
+      setError('请输入用户名和密码');
+      return;
+    }
+    try {
+      const response = await authApi.login(passwordFormData);
+      if (response.data.token) {
+        await login(response.data.token);
+        navigate('/');
+      } else {
+        setError('登录失败，未收到认证令牌。');
+      }
+    } catch (err) {
+      setError('登录失败，请检查您的用户名和密码。');
+      console.error(err);
+    }
   };
-  
+
+  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    if (!emailFormData.email || !emailFormData.code) {
+      setError('请输入邮箱和验证码');
+      return;
+    }
+    try {
+      const response = await authApi.loginByEmail(emailFormData);
+      if (response.data.token) {
+        await login(response.data.token);
+        navigate('/');
+      } else {
+        setError('登录失败，未收到认证令牌。');
+      }
+    } catch (err) {
+      setError('登录失败，请检查您的验证码。');
+      console.error(err);
+    }
+  };
+
   return (
-    <Box
-      sx={{
-        height: '100vh',
-        width: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-      }}
-    >
-      <Paper
-        elevation={3}
-        sx={{
-          padding: 4,
-          width: 400,
-          borderRadius: 2,
-        }}
-      >
-        {/* 修改: 标题根据模式动态改变 */}
-        <Typography variant="h5" component="h1" align="center" gutterBottom>
-          {isLoginMode ? '欢迎登录' : '创建新账户'}
-        </Typography>
+    <div className="flex items-center justify-center min-h-screen bg-background px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-foreground mb-2 tracking-tight">欢迎回来</h1>
+          <p className="text-muted-foreground text-base">登录继续您的创作之旅</p>
+        </div>
 
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-          {apiError && <Alert severity="error" sx={{ mb: 2 }}>{apiError}</Alert>}
-          {/* 新增: 显示成功消息 */}
-          {apiSuccess && <Alert severity="success" sx={{ mb: 2 }}>{apiSuccess}</Alert>}
-          
-          <TextField
-            {...register('username')}
-            label="用户名"
-            required
-            fullWidth
-            margin="normal"
-            error={!!errors.username}
-            helperText={errors.username?.message}
-            autoFocus
-          />
+        {/* Card */}
+        <div className="bg-card rounded-2xl shadow-lg border border-border p-8 space-y-6">
+          {/* Tab Navigation */}
+          <div className="flex border-b border-border">
+            <button
+              className={`flex-1 pb-3 text-center text-base font-medium transition-all duration-200 border-b-2 ${
+                loginType === 'password'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setLoginType('password')}
+            >
+              密码登录
+            </button>
+            <button
+              className={`flex-1 pb-3 text-center text-base font-medium transition-all duration-200 border-b-2 ${
+                loginType === 'email'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setLoginType('email')}
+            >
+              验证码登录
+            </button>
+          </div>
 
-          {/* 新增: 为注册模式条件性地渲染邮箱输入框 */}
-          {!isLoginMode && (
-            <TextField
-              {...register('email')}
-              label="邮箱"
-              type="email"
-              required
-              fullWidth
-              margin="normal"
-              error={!!errors.email}
-              helperText={errors.email?.message}
-            />
-          )}
-
-          <TextField
-            {...register('password')}
-            label="密码"
-            type="password"
-            required
-            fullWidth
-            margin="normal"
-            error={!!errors.password}
-            helperText={errors.password?.message}
-          />
-
-          {/* 新增: 为注册模式条件性地渲染确认密码输入框 */}
-          {!isLoginMode && (
-              <TextField
-                  {...register('confirmPassword')}
-                  label="确认密码"
+          {/* Forms */}
+          {loginType === 'password' ? (
+            <form className="space-y-5" onSubmit={handlePasswordSubmit}>
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-foreground mb-2">
+                  用户名
+                </label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  className="block w-full px-4 py-3.5 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 text-base"
+                  placeholder="输入您的用户名"
+                  value={passwordFormData.username}
+                  onChange={handlePasswordChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-2">
+                  密码
+                </label>
+                <input
+                  id="password"
+                  name="password"
                   type="password"
                   required
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword?.message}
-              />
+                  className="block w-full px-4 py-3.5 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 text-base"
+                  placeholder="输入您的密码"
+                  value={passwordFormData.password}
+                  onChange={handlePasswordChange}
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3.5 px-4 bg-primary text-primary-foreground rounded-lg font-medium text-base hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 shadow-sm"
+              >
+                登录
+              </button>
+            </form>
+          ) : (
+            <form className="space-y-5" onSubmit={handleEmailSubmit}>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+                  邮箱地址
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    className="flex-1 px-4 py-3.5 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="输入您的邮箱"
+                    value={emailFormData.email}
+                    onChange={handleEmailChange}
+                    disabled={isCodeSent}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={isCodeSent}
+                    className="px-5 py-3.5 border border-input rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {isCodeSent ? '已发送' : '发送验证码'}
+                  </button>
+                </div>
+              </div>
+              {isCodeSent && (
+                <div>
+                  <label htmlFor="code" className="block text-sm font-medium text-foreground mb-2">
+                    验证码
+                  </label>
+                  <input
+                    id="code"
+                    name="code"
+                    type="text"
+                    required
+                    className="block w-full px-4 py-3.5 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 text-base"
+                    placeholder="输入6位验证码"
+                    value={emailFormData.code}
+                    onChange={handleEmailChange}
+                  />
+                </div>
+              )}
+              <button
+                type="submit"
+                className="w-full py-3.5 px-4 bg-primary text-primary-foreground rounded-lg font-medium text-base hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 shadow-sm"
+              >
+                登录
+              </button>
+            </form>
           )}
 
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button
-              variant="outlined"
-              color="inherit" // 从 'error' 改为 'inherit'，外观更中性
-              onClick={handleReset}
-            >
-              重置
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={isSubmitting}
-            >
-              {/* 修改: 按钮文本根据模式和提交状态动态改变 */}
-              {isSubmitting ? '处理中...' : (isLoginMode ? '登录' : '注册')}
-            </Button>
-          </Box>
+          {error && (
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive text-center">{error}</p>
+            </div>
+          )}
+        </div>
 
-          {/* 新增: 用于在登录和注册模式间切换的链接 */}
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Link component="button" variant="body2" onClick={toggleMode} sx={{ cursor: 'pointer' }}>
-              {isLoginMode ? '还没有账户？点击注册' : '已有账户？返回登录'}
-            </Link>
-          </Box>
-        </Box>
-      </Paper>
-    </Box>
+        {/* Footer */}
+        <div className="mt-6 text-center">
+          <p className="text-muted-foreground text-sm">
+            还没有账户？{' '}
+            <button
+              onClick={() => navigate('/register')}
+              className="font-medium text-accent hover:underline transition-all duration-200"
+            >
+              立即注册
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
   );
-};
-
-export default LoginPage;
-
-// import { useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import api from '../services/api.ts';
-
-// // 导入 react-hook-form 和 yup
-// import { useForm } from 'react-hook-form';
-// import { yupResolver } from '@hookform/resolvers/yup';
-// import * as yup from 'yup';
-// // 导入 MUI 组件
-// import { Box, TextField, Button, Typography, Paper, Alert } from '@mui/material';
-
-// // 1. 定义表单数据的 TypeScript 类型
-// // FIX: 移除了 password 字段的 '?'，使其成为必填项，与 yup schema 保持一致
-// interface IFormData {
-//   username: string;
-//   password: string;
-// }
-
-// interface IApiResponse {
-//   code: number;
-//   message: string;
-//   token?: string; // token 在失败时可能不存在，设为可选
-// }
-
-// // 2. 使用 yup 创建验证 schema (无需改动)
-// const schema = yup.object().shape({
-//   username: yup
-//     .string()
-//     .required('用户名不能为空')
-//     .min(4, '用户名长度必须在4-12之间')
-//     .max(12, '用户名长度必须在4-12之间'),
-//   password: yup
-//     .string()
-//     .required('密码不能为空')
-//     .min(6, '密码长度必须在6-20之间')
-//     .max(20, '密码长度必须在6-20之间'),
-// });
-
-// const LoginPage = () => {
-//   const navigate = useNavigate();
-//   const [apiError, setApiError] = useState<string | null>(null);
-
-//   // 3. 初始化 react-hook-form
-//   const {
-//     register,          // 用于将输入框注册到 hook form
-//     handleSubmit,      // 包装我们的提交函数，并处理验证
-//     formState: { errors, isSubmitting }, // 包含表单状态，如错误信息和提交状态
-//     reset,             // 用于重置表单
-//   } = useForm<IFormData>({
-//     resolver: yupResolver(schema), // 将 yup schema 与 hook form 连接
-//   });
-
-//   // 4. 定义提交逻辑，替代 login 方法
-//   const onSubmit = async (data: IFormData) => {
-//     setApiError(null); // 重置 API 错误
-//     try {
-//       const { data: result } = await api.post<IApiResponse>('/login', data);
-//       if (result.code !== 200) {
-//         // 假设 API 在失败时返回一个 message
-//         setApiError(result.message || '登录失败，请重试');
-//         return;
-//       }
-//       // 登陆成功，存储token
-//       if (result.token) {
-//         window.sessionStorage.setItem('token', result.token);
-//         navigate('/home');
-//       } else {
-//         setApiError('登录成功但未收到 Token');
-//       }
-//     } catch (error: any) {
-//       // 网络层面的错误（如 500, 404）会被 api.ts 的拦截器捕获并显示全局通知
-//       // 我们也可以选择在这里显示一个更具体的表单内错误
-//       const specificMessage = error.response?.data?.message;
-//       if (specificMessage) {
-//         setApiError(specificMessage);
-//       }
-//       // 全局的 Snackbar 错误提示已经由 api.ts 处理了，这里无需额外操作
-//       console.error("Login failed:", error);
-//     }
-//   };
-
-//   // 5. 定义重置逻辑
-//   const handleReset = () => {
-//     reset({ username: '', password: '' });
-//     setApiError(null);
-//   };
-  
-//   // 6. 渲染 JSX 和样式
-//   return (
-//     <Box // 模拟背景
-//       sx={{
-//         height: '100vh',
-//         width: '100%',
-//         display: 'flex',
-//         justifyContent: 'center',
-//         alignItems: 'center',
-//         backgroundColor: '#f5f5f5',
-//       }}
-//     >
-//       <Paper // 模拟 loginBox
-//         elevation={3}
-//         sx={{
-//           padding: 4,
-//           width: 400,
-//           borderRadius: 2,
-//         }}
-//       >
-//         <Typography variant="h5" component="h1" align="center" gutterBottom>
-//           欢迎登录
-//         </Typography>
-
-//         {/* 将 handleSubmit 绑定到 form 的 onSubmit 事件 */}
-//         <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-//           {apiError && <Alert severity="error" sx={{ mb: 2 }}>{apiError}</Alert>}
-          
-//           <TextField
-//             // 使用 register 连接 input
-//             {...register('username')}
-//             label="用户名"
-//             required
-//             fullWidth
-//             margin="normal"
-//             // 显示 yup 提供的验证错误
-//             error={!!errors.username}
-//             helperText={errors.username?.message}
-//             autoFocus
-//           />
-
-//           <TextField
-//             {...register('password')}
-//             label="密码"
-//             type="password"
-//             required
-//             fullWidth
-//             margin="normal"
-//             error={!!errors.password}
-//             helperText={errors.password?.message}
-//           />
-
-//           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-//             <Button
-//               variant="outlined"
-//               color="error"
-//               onClick={handleReset}
-//             >
-//               取消
-//             </Button>
-//             <Button
-//               type="submit"
-//               variant="contained"
-//               color="primary"
-//               disabled={isSubmitting} // 在提交过程中禁用按钮
-//             >
-//               {isSubmitting ? '登录中...' : '登录'}
-//             </Button>
-//           </Box>
-//         </Box>
-//       </Paper>
-//     </Box>
-//   );
-// };
-
-// export default LoginPage;
+}

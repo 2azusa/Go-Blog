@@ -12,7 +12,7 @@ import {
 import { EditOutlined } from '@ant-design/icons';
 
 import { profileApi } from '../../api/api';
-import type { IReqProfile, IRspProfile } from '../../types/types';
+import type { IReqProfile, IRspProfile } from '../../api/types';
 
 // 引入我们创建的通用组件
 import EntityFormModal from '../../components/EntityFormModal';

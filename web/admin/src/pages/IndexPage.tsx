@@ -13,7 +13,6 @@ const IndexPage = () => {
         </Button>
       }
       style={{
-        // 让 Result 组件在内容区域内垂直居中
         height: '100%',
         display: 'flex',
         flexDirection: 'column',

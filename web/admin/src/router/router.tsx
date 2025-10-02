@@ -4,7 +4,7 @@ import IndexPage from '../pages/IndexPage.tsx';
 import NotFoundPage from '../pages/NotFoundPage.tsx';
 import LoginPage from '../pages/Auth/LoginPage.tsx';
 import RegisterPage from '../pages/Auth/RegisterPage.tsx';
-import AdminLayout from '../components/AdminLayout.tsx';
+import AdminLayout from '../components/layout/AdminLayout.tsx';
 import ProtectedRoute from './ProtectedRoute.tsx';
 
 import ArticleListPage from '../pages/Article/ArticleListPage.tsx';

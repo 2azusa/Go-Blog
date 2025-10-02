@@ -12,7 +12,7 @@ import {
   message // 引入 message
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import type { IRspCategory, IReqPagination, IReqCategory } from '../../types/types';
+import type { IRspCategory, IReqPagination, IReqCategory } from '../../api/types';
 
 // 引入我们创建的通用组件
 import EntityFormModal from '../../components/EntityFormModal';

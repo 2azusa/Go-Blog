@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { articlesApi } from '../../api/api';
-import type { IReqPagination, IRspArticle } from '../../types/types';
+import type { IReqPagination, IRspArticle } from '../../api/types';
 import {
   Card,
   Table,

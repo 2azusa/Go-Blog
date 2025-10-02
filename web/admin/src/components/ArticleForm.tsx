@@ -1,12 +1,10 @@
 import React, { useEffect } from 'react';
 import { Form, Input, Select, Button, Divider } from 'antd';
-import type { IRspCategory, IReqArticle } from '../types/types';
+import type { IRspCategory, IReqArticle } from '../api/types';
 import ImageUploader from './ImageUploader';
 
-// 1. 引入 ReactQuill 和它的 CSS 样式
 import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // 'snow' 是一个流行主题
-
+import 'react-quill/dist/quill.snow.css';
 const { Option } = Select;
 
 interface ArticleFormProps {
@@ -16,7 +14,6 @@ interface ArticleFormProps {
   loading: boolean;
 }
 
-// 2. 配置富文本编辑器的工具栏
 const quillModules = {
   toolbar: [
     [{ 'header': [1, 2, 3, false] }],
@@ -41,7 +38,7 @@ const ArticleForm: React.FC<ArticleFormProps> = ({ initialValues, categories, on
       title: values.title,
       cid: values.cid,
       desc: values.desc,
-      content: values.content, // content 字段现在是 HTML 字符串
+      content: values.content,
       img: values.img || '',
     };
     onFinish(articleData);
@@ -75,7 +72,6 @@ const ArticleForm: React.FC<ArticleFormProps> = ({ initialValues, categories, on
       
       <Divider />
 
-      {/* 将 TextArea 替换为 ReactQuill 组件 */}
       <Form.Item 
         name="content" 
         label="文章内容" 
@@ -86,7 +82,7 @@ const ArticleForm: React.FC<ArticleFormProps> = ({ initialValues, categories, on
         <ReactQuill
           theme="snow"
           modules={quillModules}
-          style={{ height: '400px', marginBottom: '50px' }} // 给编辑器一个固定的高度
+          style={{ height: '400px', marginBottom: '50px' }}
           placeholder="开始创作你的文章..."
         />
       </Form.Item>

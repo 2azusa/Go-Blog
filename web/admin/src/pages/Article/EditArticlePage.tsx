@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { articlesApi, categoryApi } from '../../api/api'; // 确认路径是否正确
-import type { IReqArticle, IRspCategory, IReqPagination } from '../../types/types'; // 确认路径是否正确
+import type { IReqArticle, IRspCategory, IReqPagination } from '../../api/types'; // 确认路径是否正确
 import { Card, Spin, Alert, message } from 'antd';
 import { PageHeader } from '@ant-design/pro-components';
 import ArticleForm from '../../components/ArticleForm'; // 确认路径是否正确

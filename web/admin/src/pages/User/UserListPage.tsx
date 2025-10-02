@@ -14,7 +14,7 @@ import {
   message
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import type { IReqUser, IRspUser, IReqPagination } from '../../types/types';
+import type { IReqUser, IRspUser, IReqPagination } from '../../api/types';
 
 // 引入我们创建的通用组件
 import EntityFormModal from '../../components/EntityFormModal';

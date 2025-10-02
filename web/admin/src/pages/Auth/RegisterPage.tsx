@@ -1,14 +1,11 @@
-// src/pages/RegisterPage.tsx
-
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { authApi } from '../../api/api';
 import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 
-import type { IReqRegister } from '../../types/types';
+import type { IReqRegister } from '../../api/types';
 
-// Form data interface for registration
 interface IFormData {
   username: string;
   password: string;
@@ -106,16 +103,15 @@ const RegisterPage = () => {
 
           <Form.Item
             name="confirmPassword"
-            dependencies={['password']} // 声明依赖于 'password' 字段
+            dependencies={['password']}
             rules={[
               { required: true, message: '请再次输入密码!' },
-              // 自定义校验逻辑
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('password') === value) {
-                    return Promise.resolve(); // 校验通过
+                    return Promise.resolve();
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致!')); // 校验失败
+                  return Promise.reject(new Error('两次输入的密码不一致!'));
                 },
               }),
             ]}

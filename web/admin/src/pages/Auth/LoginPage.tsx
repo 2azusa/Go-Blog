@@ -1,14 +1,11 @@
-// src/pages/LoginPage.tsx
-
 import { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { authApi } from '../../api/api';
 import { Form, Input, Button, Card, Typography, Alert, Space } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 
-import type { IReqLogin } from '../../types/types';
+import type { IReqLogin } from '../../api/types';
 
-// The form data interface remains the same
 interface IFormData {
   username: string;
   password: string;
@@ -18,9 +15,9 @@ const { Title } = Typography;
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const [form] = Form.useForm<IFormData>(); // Ant Design's form hook
+  const [form] = Form.useForm<IFormData>();
   const [apiError, setApiError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false); // For button loading state
+  const [loading, setLoading] = useState<boolean>(false);
 
   const onFinish = async (formData: IFormData) => {
     setApiError(null);
@@ -40,7 +37,7 @@ const LoginPage = () => {
 
       if (result.token) {
         window.sessionStorage.setItem('token', result.token);
-        navigate('/'); // Login success, navigate to homepage
+        navigate('/');
       } else {
         setApiError('登录成功但未收到 Token');
       }
@@ -48,7 +45,7 @@ const LoginPage = () => {
       const specificMessage = error.response?.data?.message || '登录失败，请检查您的用户名和密码';
       setApiError(specificMessage);
     } finally {
-      setLoading(false); // Stop loading regardless of outcome
+      setLoading(false);
     }
   };
 

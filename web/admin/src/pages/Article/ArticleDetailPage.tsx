@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { articlesApi } from '../../api/api';
-import type { IRspArticle } from '../../types/types';
+import type { IRspArticle } from '../../api/types';
 import { 
     Card, 
     Spin, 
@@ -16,7 +16,6 @@ import {
 import { PageHeader } from '@ant-design/pro-components';
 import { EditOutlined } from '@ant-design/icons';
 
-// 引入 Quill 的 CSS，用于正确展示内容样式
 import 'react-quill/dist/quill.snow.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -101,7 +100,6 @@ const ArticleDetailPage = () => {
               </Paragraph>
 
               <Title level={5}>正文</Title>
-              {/* 使用 dangerouslySetInnerHTML 来渲染 HTML 内容 */}
               <div 
                 className="ql-snow" 
                 style={{ border: 'none' }}

@@ -7,11 +7,12 @@ import (
 )
 
 // 解析配置文件并设置参数
-
 var (
-	AppMode  string
-	HttpPort string
-	JwtKey   string
+	AppMode   string
+	HttpPort  string
+	FrontPort string
+	AdminPort string
+	JwtKey    string
 
 	Db         string
 	DbHost     string
@@ -51,7 +52,9 @@ func init() {
 
 func LoadServer(file *ini.File) {
 	AppMode = file.Section("server").Key("AppMode").MustString("debug")
-	HttpPort = file.Section("server").Key("HttpPort").MustString(":80")
+	HttpPort = file.Section("server").Key("HttpPort").MustString(":8080")
+	FrontPort = file.Section("server").Key("FrontPort").MustString(":3000")
+	AdminPort = file.Section("server").Key("AdminPort").MustString(":5000")
 	JwtKey = file.Section("server").Key("JwtKey").MustString("45df45rds4")
 }
 
@@ -61,7 +64,7 @@ func LoadDate(file *ini.File) {
 	DbPort = file.Section("database").Key("DbPort").MustString(":3306")
 	DbUser = file.Section("database").Key("DbUser").MustString("goblog_user")
 	DbPassWord = file.Section("database").Key("DbPassword").MustString("123456")
-	DbName = file.Section("database").Key("DbName").MustString("goblog")
+	DbName = file.Section("database").Key("DbName").MustString("blog")
 }
 
 func LoadQiniu(file *ini.File) {

@@ -4,33 +4,55 @@ import (
 	"goblog/controller"
 	"goblog/middleware"
 	"goblog/utils"
+	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 func InitRouter() {
 	gin.SetMode(utils.AppMode)
-	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(middleware.Logger())
-	r.Use(middleware.Cors())
 
-	// 后台管理的页面加载
-	r.Static("/assets", "./static/admin/dist/assets")
-	r.NoRoute(func(c *gin.Context) {
+	apiRouter := gin.New()
+	apiRouter.Use(gin.Recovery(), middleware.Logger(), middleware.Cors())
+	apiGroup := apiRouter.Group("api/v1")
+	registerApiRoutes(apiGroup)
+
+	frontRouter := gin.New()
+	frontRouter.Static("/assets", "./static/front/dist/assets")
+	frontRouter.StaticFile("/favicon.ico", "./static/front/dist/favicon.ico")
+	frontRouter.NoRoute(func(c *gin.Context) {
+		c.File("./static/front/dist/index.html")
+	})
+
+	adminRouter := gin.New()
+	adminRouter.Static("/assets", "./static/admin/dist/assets")
+	adminRouter.StaticFile("/favicon.ico", "./static/admin/dist/favicon.ico")
+	adminRouter.NoRoute(func(c *gin.Context) {
 		c.File("./static/admin/dist/index.html")
 	})
 
-	// 前台展示的的页面加载
-	// r.Static("/assets", "./static/front/dist/assets")
-	// r.NoRoute(func(c *gin.Context) {
-	// 	c.File("./static/front/dist/index.html")
-	// })
+	go func() {
+		log.Printf("Frontend server running on http://localhost%s", utils.AdminPort)
+		if err := http.ListenAndServe(utils.FrontPort, frontRouter); err != nil {
+			log.Fatalf("Failed to run frontend server: %v", err)
+		}
+	}()
 
-	// --- API 路由 ---
-	apiV1 := r.Group("api/v1")
+	go func() {
+		log.Printf("Admin server running on http://localhost%s", utils.AdminPort)
+		if err := http.ListenAndServe(utils.AdminPort, adminRouter); err != nil {
+			log.Fatalf("Failed to run admin server: %v", err)
+		}
+	}()
 
-	// --- 公共接口 (无需 Token 验证) ---
+	log.Printf("API server running on http://localhost%s", utils.HttpPort)
+	if err := http.ListenAndServe(utils.HttpPort, apiRouter); err != nil {
+		log.Fatalf("Failed to run API server: %v", err)
+	}
+}
+
+func registerApiRoutes(apiV1 *gin.RouterGroup) {
 	{
 		// 用户/认证模块
 		apiV1.POST("register", controller.Register)           // 用户注册 | 参数来源: JSON 请求体
@@ -82,6 +104,31 @@ func InitRouter() {
 		// 文件上传
 		apiV1.POST("upload", controller.Upload) // 上传文件 | 参数来源: 表单 (multipart/form-data)
 	}
-
-	r.Run(utils.HttpPort)
 }
+
+// func InitRouter() {
+// 	gin.SetMode(utils.AppMode)
+// 	r := gin.New()
+// 	r.Use(gin.Recovery())
+// 	r.Use(middleware.Logger())
+// 	r.Use(middleware.Cors())
+
+// 	// 后台管理的页面加载
+// 	r.Static("/assets", "./static/admin/dist/assets")
+// 	r.NoRoute(func(c *gin.Context) {
+// 		c.File("./static/admin/dist/index.html")
+// 	})
+
+// 	// 前台展示的的页面加载
+// 	r.Static("/assets", "./static/front/dist/assets")
+// 	r.NoRoute(func(c *gin.Context) {
+// 		c.File("./static/front/dist/index.html")
+// 	})
+
+// 	// --- API 路由 ---
+// 	// apiV1 := r.Group("api/v1")
+
+// 	// --- 公共接口 (无需 Token 验证) ---
+
+// 	r.Run(utils.HttpPort)
+// }

@@ -12,4 +12,5 @@ log/
 _misc/
 
 # Compiled binary
+bin/
 Go-Blog

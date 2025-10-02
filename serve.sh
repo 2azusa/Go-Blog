@@ -1,81 +1,117 @@
 #!/bin/bash
 
-#变量
+# 变量
 PROJECTNAME="Go-Blog"
 PROJECTBASE="."
 PROJECTBIN="$PROJECTBASE/bin"
 PROJECTLOGS="$PROJECTBASE/log"
 prog=$PROJECTNAME
-#获取当前目录
-CURDIR=$(dirname $0)
+
+CURDIR=$(cd $(dirname $0); pwd)
 cd $CURDIR
 
-#运行服务
-start() {
-        # 确保日志目录存在
-        mkdir -p $PROJECTLOGS
-        echo -e "Begin to compile the project ---$PROJECTNAME..."
-        #编译go项目
-        go build -o $PROJECTNAME main.go
-        #赋予权限
-        chmod +x "$CURDIR/$PROJECTNAME"
-        echo "Compilation completed"
-        echo "starting $PROJECTNAME,please waiting..."
-        #后台运行项目
-        nohup ./$PROJECTNAME > $PROJECTLOGS/run.log 2>&1 &
-        echo -e "ok"
-}
-#暂停服务
-stop(){
-        echo -e $"Stopping the project ---$prog: "
-        #获取进程
-        pid=$(ps -ef | grep $prog | grep -v grep | awk '{print $2}')
-        if [ "$pid" ]; then
-                echo -n $"kill process pid: $pid "
-                #杀掉进程
-                kill -9 $pid
-                ret=0
-                #多次循环杀掉进程
-                for ((i=1;i<=15;i++)); do
-                        sleep 1
-                        pid=$(ps -ef | grep $prog | grep -v grep | awk '{print $2}')
-                        if [ "$pid" ]; then
-                                kill -9 $pid
-                                ret=0
-                        else
-                                ret=1
-                                break
-                        fi
-                done
+# 确保目标目录存在
+mkdir -p $PROJECTBIN
+mkdir -p $PROJECTLOGS
 
-                if [ "$ret" ]; then
-                        echo -e $"ok"
-                else
-                        echo -e $"no"
-                fi
-        else
-                echo -e $"no program process to stop"
+# 定义PID文件路径
+PIDFILE="$PROJECTBIN/$prog.pid"
+
+# 运行服务
+start() {
+    if [ -f "$PIDFILE" ]; then
+        pid=$(cat $PIDFILE)
+        if ps -p $pid > /dev/null; then
+            echo "$prog is already running with pid $pid"
+            exit 1
         fi
+    fi
+
+    echo -e "Begin to compile the project ---$PROJECTNAME..."
+    # 编译go项目到指定的 bin 目录
+    go build -o $PROJECTBIN/$PROJECTNAME main.go
+    if [ $? -ne 0 ]; then
+        echo "Go build failed!"
+        exit 1
+    fi
+
+    echo "Compilation completed."
+    echo "Starting $prog, please waiting..."
+
+    # 后台运行项目
+    nohup $PROJECTBIN/$PROJECTNAME > $PROJECTLOGS/run.log 2>&1 &
+    # 将新进程的PID写入文件
+    echo $! > $PIDFILE
+
+    sleep 2
+    # 检查是否启动成功
+    if ps -p $(cat $PIDFILE) > /dev/null; then
+        echo "Service started successfully with PID: $(cat $PIDFILE)"
+    else
+        echo "Service failed to start."
+        rm -f $PIDFILE
+    fi
 }
-#重启服务
+
+# 停止服务
+stop(){
+    echo -e $"Stopping the project ---$prog: "
+    if [ ! -f "$PIDFILE" ]; then
+        echo "No pid file found, service may not be running."
+        exit 1
+    fi
+
+    pid=$(cat $PIDFILE)
+    if ! ps -p $pid > /dev/null; then
+        echo "Process with pid $pid not found, maybe already stopped."
+        rm -f $PIDFILE
+        exit 0
+    fi
+
+    # 1. SIGTERM
+    echo -n $"Sending SIGTERM to process $pid ... "
+    kill -15 $pid
+
+    # 等待最多 10 秒让其自行退出
+    for ((i=1;i<=10;i++)); do
+        sleep 1
+        if ! ps -p $pid > /dev/null ; then
+            echo "stopped gracefully. OK"
+            rm -f $PIDFILE
+            return 0
+        fi
+    done
+
+    # 2. SIGKILL
+    echo ""
+    echo -n $"Process did not respond to SIGTERM, sending SIGKILL to $pid ... "
+    kill -9 $pid
+    sleep 1
+    echo "stopped forcibly. OK"
+    rm -f $PIDFILE
+}
+
+# 重启服务
 restart(){
-        stop
-        sleep 2
-        start
+    echo "Restarting $prog ..."
+    stop
+    sleep 2
+    start
 }
-#判断第一个参数
+
+# 判断命令
 case "$1" in
 start)
-        $1
-        ;;
+    start
+    ;;
 stop)
-        $1
-        ;;
+    stop
+    ;;
 restart)
-        $1
-        ;;
+    restart
+    ;;
 *)
-        echo $"Usage: $0 {start|stop|restart}"
-        exit 2
-        ;;
+    echo $"Usage: $0 {start|stop|restart}"
+    exit 2
+    ;;
 esac
